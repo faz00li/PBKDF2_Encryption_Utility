@@ -1,12 +1,13 @@
-import json
-
 from Crypto.Protocol.KDF import PBKDF2
+from Crypto.Random import get_random_bytes
+
+import json
 import Crypto.Hash.SHA256
 import Crypto.Hash.SHA512
 
-from Crypto.Random import get_random_bytes
-
-
+'''
+initializeParams() opens the configuration file and prints its contents to console
+'''
 def initializeParams():
 	with open('config_file') as config_file:
 		global config_scheme
@@ -20,6 +21,9 @@ def initializeParams():
 		"Iterations: \t\t" + str(config_scheme["count"]),\
 		sep='\n')
 
+'''
+createMasterKey() creates a master key w/ the PBKDF2 standard
+'''
 def createMasterKey():
 	hashes = {"SHA256": Crypto.Hash.SHA256, "SHA512": Crypto.Hash.SHA512}
 	salt = get_random_bytes(16)
@@ -28,8 +32,10 @@ def createMasterKey():
 	key = PBKDF2(password, salt, 256, count=1000, hmac_hash_module=hash_type)
 	return key
 
+'''
+createSingleKey() creates a single key that can be used for encryption or message authentication
+'''
 def createKey():
-	# TODO: verify key lengths
 	standard_key_length = {"3DES": 64, "AES128": 128, "AES256": 256}
 	desired_length = standard_key_length[config_scheme["encryptionType"]]
 	print("Key Length", desired_length)
