@@ -1,5 +1,4 @@
 {
-	"filePath": "/home/Desktop/seed/crypto/encrypt_me.txt",
 	"hashType": "SHA256",
  	"encryptionType": "AES128",
  	"password": "password",

@@ -6,58 +6,70 @@ import Crypto.Hash.SHA256
 import Crypto.Hash.SHA512
 
 '''
-initializeParams() opens the configuration file and prints its contents to console
+initEncryptionScheme()
+	* opens the configuration file
+	* parses parameters into dictionary
+	* prints schema contents to console
 '''
-def initializeParams():
+def initEncryptionScheme():
 	with open('config_file') as config_file:
-		global config_scheme
-		config_scheme = json.load(config_file)
-	# trouble shooting
+		global encryption_scheme
+		encryption_scheme = json.load(config_file)
+	
 	print(\
-		"File Path: \t\t" + config_scheme["filePath"],\
-		"Hash Type: \t\t" + config_scheme["hashType"],\
-		"Encryption Standard: \t" + config_scheme["encryptionType"],\
-		"Password: \t\t" + config_scheme["password"],\
-		"Iterations: \t\t" + str(config_scheme["count"]),\
+		"Password: \t\t" + encryption_scheme["password"],\
+		"Encryption Standard: \t" + encryption_scheme["encryptionType"],\
+		"Hash Type: \t\t" + encryption_scheme["hashType"],\
+		"Iterations: \t\t" + str(encryption_scheme["count"]),\
 		sep='\n')
 
 '''
-createMasterKey() creates a master key w/ the PBKDF2 standard
+createMasterKey()
+	* generate a master key w/ PBKDF2 standard
+	* passes the password and count paramete to createKey()
 '''
 def createMasterKey():
-	hashes = {"SHA256": Crypto.Hash.SHA256, "SHA512": Crypto.Hash.SHA512}
-	salt = get_random_bytes(16)
-	password = config_scheme['password']
-	hash_type = hashes[config_scheme['hashType']]
-	key = PBKDF2(password, salt, 256, count=1000, hmac_hash_module=hash_type)
-	return key
+	password = encryption_scheme['password']
+	count = encryption_scheme['count']
+	return createKey(password, count)
 
 '''
-createSingleKey() creates a single key that can be used for encryption or message authentication
+createKey(password, count)
+	* generate a single key, dictated by args, that can be used as a:
+		> session master key
+		> document encryption key
+		> message authentication key
 '''
-def createKey():
-	standard_key_length = {"3DES": 64, "AES128": 128, "AES256": 256}
-	desired_length = standard_key_length[config_scheme["encryptionType"]]
-	print("Key Length", desired_length)
-
-	hashes = {"SHA256": Crypto.Hash.SHA256, "SHA512": Crypto.Hash.SHA512}
+def createKey(password: str, count: int):
 	salt = get_random_bytes(16)
-	password = config_scheme['password']
-	hash_type = hashes[config_scheme['hashType']]
-	key = PBKDF2(password, salt, desired_length, count=1000, hmac_hash_module=hash_type)
-	return key
+	dkLen = standard_key_length[encryption_scheme['encryptionType']]
+	hash_type = hash_library[encryption_scheme['hashType']]
+	return PBKDF2(password, salt, dkLen, count, hmac_hash_module=hash_type)
 
-config_scheme = {}
+'''
+Dictionaries of hash modules and info about encrytion standards.
+Can be easily updated for purposes of crypto-agility
+'''
+hash_library = {"SHA256": Crypto.Hash.SHA256, "SHA512": Crypto.Hash.SHA512}
+standard_key_length = {"3DES": 64, "AES128": 128, "AES256": 256}
+
+'''
+variables tracking encryption session keys
+'''
 master_key = b''
+encryption_key = b''
+hmac_key = b''
+encryption_scheme = {}
 
-initializeParams()
-master_key = createMasterKey()
+'''
+main()-ish
+	* Collect info from configuration file
+	* Create master key
+'''
+initEncryptionScheme() 
+master_key = createMasterKey() 
 
 print("Master Key: ", master_key)
-
-encryption_key = createKey()
-
-print("Encryption Key:", encryption_key)
 
 
 
