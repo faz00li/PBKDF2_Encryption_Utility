@@ -1,5 +1,8 @@
+from base64 import b64encode
+from Crypto.Cipher import AES
 from Crypto.Protocol.KDF import PBKDF2
 from Crypto.Random import get_random_bytes
+from Crypto.Util.Padding import pad
 
 import json
 import Crypto.Hash.SHA256
@@ -21,7 +24,7 @@ def initEncryptionScheme():
 		"Encryption Standard: \t" + encryption_scheme["encryptionType"],\
 		"Hash Type: \t\t" + encryption_scheme["hashType"],\
 		"Iterations: \t\t" + str(encryption_scheme["count"]),\
-		sep='\n')
+		sep='\n', end='\n\n')
 
 '''
 createMasterKey()
@@ -32,6 +35,22 @@ def createMasterKey():
 	password = encryption_scheme['password']
 	count = encryption_scheme['count']
 	return createKey(password, count)
+
+'''
+createEncryptionKey(master_key)
+	* derive key w/ single iteration from master key
+	* use for encryption
+''' 
+def createEncryptionKey(master_key, count = 1):
+	return createKey(master_key, count)
+
+'''
+createHmacKey(master_key)
+	* derive key w/ single PBKDF2 iteration from master key
+	* use for message authentication
+'''
+def createHmacKey(master_key):
+	return createKey(master_key, count = 1)
 
 '''
 createKey(password, count)
@@ -47,7 +66,21 @@ def createKey(password: str, count: int):
 	return PBKDF2(password, salt, dkLen, count, hmac_hash_module=hash_type)
 
 '''
-Dictionaries of hash modules and info about encrytion standards.
+encryptDocument(encryption_key)
+	* encrypt document in manner specified by config schema
+'''
+def encryptDocument(encryption_key):
+	data = b"secret"
+	key = get_random_bytes(16)
+	cipher = AES.new(key, AES.MODE_CBC)
+	ct_bytes = cipher.encrypt(pad(data, AES.block_size))
+	iv = b64encode(cipher.iv).decode('utf-8')
+	ct = b64encode(ct_bytes).decode('utf-8')
+	result = json.dumps({'iv':iv, 'ciphertext':ct})
+	print(result)
+
+'''
+Dictionaries of hash modules and info about encrytion standards
 Can be easily updated for purposes of crypto-agility
 '''
 hash_library = {"SHA256": Crypto.Hash.SHA256, "SHA512": Crypto.Hash.SHA512}
@@ -67,9 +100,16 @@ main()-ish
 	* Create master key
 '''
 initEncryptionScheme() 
-master_key = createMasterKey() 
+master_key = createMasterKey()
+print("Master Key: ", master_key, end='\n\n') 
 
-print("Master Key: ", master_key)
+encryption_key = createEncryptionKey(master_key)
+print("Encryption Key: ", encryption_key, end='\n\n')
+
+hmac_key = createHmacKey(master_key )
+print("HMAC Key: ", hmac_key, end='\n\n')
+
+encryptDocument(encryption_key)
 
 
 
