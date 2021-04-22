@@ -62,6 +62,7 @@ createKey(password, count)
 def createKey(password: str, count: int):
 	salt = get_random_bytes(16)
 	dkLen = standard_key_length[encryption_scheme['encryptionType']]
+	print("KEY LENGTH: ", dkLen)
 	hash_type = hash_library[encryption_scheme['hashType']]
 	return PBKDF2(password, salt, dkLen, count, hmac_hash_module=hash_type)
 
@@ -70,21 +71,29 @@ encryptDocument(encryption_key)
 	* encrypt document in manner specified by config schema
 '''
 def encryptDocument(encryption_key):
-	data = b"secret"
-	key = get_random_bytes(16)
-	cipher = AES.new(key, AES.MODE_CBC)
-	ct_bytes = cipher.encrypt(pad(data, AES.block_size))
+	print("ENCRYPT DOCUMENT - ENCRYPTION KEY: ", encryption_key, end="\n\n")
+	print("ENCRYPT DOCUMENT - TYPE: ", type(encryption_key), end="\n\n")
+	print("ENCRYPT DOCUMENT - KEY LENGTH: ", len(encryption_key), end="\n\n")
+	cipher = AES.new(encryption_key, AES.MODE_CBC)
+	print("AES.block_size: ", AES.block_size)
+	print("ENCRYPT DOCUMENT - PLAIN TEXT: ", encryption_scheme["instructions"], end="\n\n")
+	b = bytearray()
+	b.extend(map(ord, encryption_scheme["instructions"] ))
+	print("ENCRYPT DOCUMENT - PLAIN TEXT IN BINARY: ", b, end="\n\n" )
+	# TODO - get this printed in hex 
+	ct_bytes = cipher.encrypt(pad(b, AES.block_size))
 	iv = b64encode(cipher.iv).decode('utf-8')
 	ct = b64encode(ct_bytes).decode('utf-8')
 	result = json.dumps({'iv':iv, 'ciphertext':ct})
-	print(result)
+	print("\n\n", result)
 
 '''
 Dictionaries of hash modules and info about encrytion standards
 Can be easily updated for purposes of crypto-agility
 '''
 hash_library = {"SHA256": Crypto.Hash.SHA256, "SHA512": Crypto.Hash.SHA512}
-standard_key_length = {"3DES": 64, "AES128": 128, "AES256": 256}
+# TODO changes AES128 from 128(possibly bytes not bits) to 16(bytes not bits)??#? - seems to have worked
+standard_key_length = {"3DES": 64, "AES128": 16, "AES256": 256}
 
 '''
 variables tracking encryption session keys
