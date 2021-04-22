@@ -18,13 +18,8 @@ def initEncryptionScheme():
 	with open('config_file') as config_file:
 		global encryption_scheme
 		encryption_scheme = json.load(config_file)
-	
-	print(\
-		"Password: \t\t" + encryption_scheme["password"],\
-		"Encryption Standard: \t" + encryption_scheme["encryptionType"],\
-		"Hash Type: \t\t" + encryption_scheme["hashType"],\
-		"Iterations: \t\t" + str(encryption_scheme["count"]),\
-		sep='\n', end='\n\n')
+
+		print(json.dumps(encryption_scheme, indent=1, separators=("\n", ":")), end="\n\n")
 
 '''
 createMasterKey()
@@ -34,23 +29,32 @@ createMasterKey()
 def createMasterKey():
 	password = encryption_scheme['password']
 	count = encryption_scheme['count']
-	return createKey(password, count)
+	master_salt = get_random_bytes(16)
+	human_master_salt = b64encode(master_salt).decode('utf-8')
+	encryption_scheme["masterSalt"] = human_master_salt
+	return createKey(password, count, master_salt)
 
 '''
-createEncryptionKey(master_key)
+createEncryptionKey(master_key, count=1)
 	* derive key w/ single iteration from master key
 	* use for encryption
 ''' 
-def createEncryptionKey(master_key, count = 1):
-	return createKey(master_key, count)
+def createEncryptionKey(master_key, count=1):
+	encryption_salt = get_random_bytes(16)
+	human_encryption_salt = b64encode(encryption_salt).decode('utf-8')
+	encryption_scheme["encryptionSalt"] = human_encryption_salt
+	return createKey(master_key, count, encryption_salt)
 
 '''
-createHmacKey(master_key)
+createHmacKey(master_key, count=1)
 	* derive key w/ single PBKDF2 iteration from master key
 	* use for message authentication
 '''
-def createHmacKey(master_key):
-	return createKey(master_key, count = 1)
+def createHmacKey(master_key, count=1):
+	hmac_salt = get_random_bytes(16)
+	human_hmac_salt = b64encode(hmac_salt).decode('utf-8')
+	encryption_scheme["hmacSalt"] = human_hmac_salt
+	return createKey(master_key, count, hmac_salt)
 
 '''
 createKey(password, count)
@@ -59,42 +63,47 @@ createKey(password, count)
 		> document encryption key
 		> message authentication key
 '''
-def createKey(password: str, count: int):
-	salt = get_random_bytes(16)
+def createKey(password: str, count: int, salt: b''):
+	
 	dkLen = standard_key_length[encryption_scheme['encryptionType']]
 	print("KEY LENGTH: ", dkLen)
 	hash_type = hash_library[encryption_scheme['hashType']]
 	return PBKDF2(password, salt, dkLen, count, hmac_hash_module=hash_type)
 
-'''
-encryptDocument(encryption_key)
-	* encrypt document in manner specified by config schema
-'''
-def encryptDocument(encryption_key):
-	print("ENCRYPT DOCUMENT - ENCRYPTION KEY: ", encryption_key, end="\n\n")
-	print("ENCRYPT DOCUMENT - TYPE: ", type(encryption_key), end="\n\n")
-	print("ENCRYPT DOCUMENT - KEY LENGTH: ", len(encryption_key), end="\n\n")
-	cipher = AES.new(encryption_key, AES.MODE_CBC)
-	print("AES.block_size: ", AES.block_size)
-	print("ENCRYPT DOCUMENT - PLAIN TEXT: ", encryption_scheme["instructions"], end="\n\n")
-	b = bytearray()
-	b.extend(map(ord, encryption_scheme["instructions"] ))
-	print("ENCRYPT DOCUMENT - PLAIN TEXT IN BINARY: ", b, end="\n\n" )
-	# TODO - get this printed in hex 
-	ct_bytes = cipher.encrypt(pad(b, AES.block_size))
-	iv = b64encode(cipher.iv).decode('utf-8')
-	ct = b64encode(ct_bytes).decode('utf-8')
-	result = json.dumps({'iv':iv, 'ciphertext':ct})
-	print("\n\n", result)
+# '''
+# encryptDocument(encryption_key)
+# 	* convert plaintext to byte arrey 
+# 	* pad byte array to appropriate block size
+# 	* encrypt document in manner specified by config schema w/ CBC mode
+# 	* output IV and ciphertext to console
+# '''
+# def encryptDocument(encryption_key):
+# 	bytes_plaintext = encryption_scheme['instructions'].encode()
+
+# 	# TODO remove development code de-bugging
+# 	print("ENCRYPTING DOCUMENT:")
+# 	print("Key: \t\t\t", encryption_key)
+# 	print("Key Type: \t\t", type(encryption_key))
+# 	print("Key Length: \t\t", len(encryption_key))
+# 	print("Plain Text: ", encryption_scheme["instructions"], end="\n\n")
+# 	print("Plain Text in Binary: ", bytes_plaintext)
+
+# 	cipher = AES.new(encryption_key, AES.MODE_CBC)
+# 	# TODO paramaterize padding to appropriate encryption algorithm
+# 	# TODO paramaterize encryption algorithm 
+# 	bytes_ciphertext = cipher.encrypt(pad(bytes_plaintext, AES.block_size))
+# 	human_iv = b64encode(cipher.iv).decode('utf-8')
+# 	human_ciphertext = b64encode(bytes_ciphertext).decode('utf-8')
+# 	result = json.dumps({'iv':human_iv, 'ciphertext':human_ciphertext})
+# 	print("\n\n", result)
+# 	# TODO create object to return
 
 '''
 Dictionaries of hash modules and info about encrytion standards
 Can be easily updated for purposes of crypto-agility
 '''
 hash_library = {"SHA256": Crypto.Hash.SHA256, "SHA512": Crypto.Hash.SHA512}
-# TODO changes AES128 from 128(possibly bytes not bits) to 16(bytes not bits)??#? - seems to have worked
-# TODO change length of keys for hashes in dictionary
-standard_key_length = {"3DES": 64, "AES128": 16, "AES256": 256}
+standard_key_length = {"3DES": 8, "AES128": 16, "AES256": 32}
 
 '''
 variables tracking encryption session keys
@@ -113,13 +122,16 @@ initEncryptionScheme()
 master_key = createMasterKey()
 print("Master Key: ", master_key, end='\n\n') 
 
+
 encryption_key = createEncryptionKey(master_key)
 print("Encryption Key: ", encryption_key, end='\n\n')
 
-hmac_key = createHmacKey(master_key )
+hmac_key = createHmacKey(master_key)
 print("HMAC Key: ", hmac_key, end='\n\n')
 
-encryptDocument(encryption_key)
+print("AMENDED DICTIONARY:", encryption_scheme)
+
+# encryptDocument(encryption_key)
 
 
 
