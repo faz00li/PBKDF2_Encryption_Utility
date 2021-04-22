@@ -93,6 +93,7 @@ Can be easily updated for purposes of crypto-agility
 '''
 hash_library = {"SHA256": Crypto.Hash.SHA256, "SHA512": Crypto.Hash.SHA512}
 # TODO changes AES128 from 128(possibly bytes not bits) to 16(bytes not bits)??#? - seems to have worked
+# TODO change length of keys for hashes in dictionary
 standard_key_length = {"3DES": 64, "AES128": 16, "AES256": 256}
 
 '''
