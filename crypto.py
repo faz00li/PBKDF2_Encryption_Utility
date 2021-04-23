@@ -15,18 +15,31 @@ from Crypto.Hash import SHA256
 from Crypto.Hash import SHA512
 
 '''
+greeting()
+	* collect user preferences, file path and password
+'''
+def greeting():
+	global user_choice
+	global password
+	global file_path
+	
+	user_choice = input("Which would you like to do: \n 1) Enrypt File \n 2) Decrypt File")
+	
+	file_path = input('Enter path to file')
+	password = input('Enter password') 
+
+'''
 initEncryptionScheme()
 	* opens the configuration file
 	* parses parameters into dictionary
 	* prints schema contents to console
 '''
 def initEncryptionScheme():
+		# TODO make sure password used is one entered by user in greeting()
+	
 	with open('config_file') as config_file:
 		global encryption_scheme
 		encryption_scheme = json.load(config_file)
-		# TODO make sure password is successfuly stored in schema
-		# password = input('Enter password... ')
-		# encryption_scheme['password'] = password
 
 		print("ENCRYPTION SCHEME TYPE: ", type(encryption_scheme))
 
@@ -153,7 +166,19 @@ def encryptFile():
 
 	saveEncryptedFile()
 
-	print("Encryption Scheme: \n", json.dumps(encryption_scheme, indent=1, skipkeys=True), end="\n") 
+	# print("Encryption Scheme: \n", json.dumps(encryption_scheme, indent=1, skipkeys=True), end="\n") 
+
+'''
+decryptFile()
+	* determine file path and name from config
+	* extract salts
+	* derive keys
+	* extract iv and ciphertext
+	* derive HMAC and compare w/ one provide
+	* decrypt
+'''
+def decryptFile():
+	print("work to do here")
 
 '''
 Dictionaries of hash modules and info about encrytion standards
@@ -164,19 +189,28 @@ hash_library = {"SHA256": SHA256, "SHA512": SHA512}
 standard_key_length = {"3DES": 8, "AES128": 16, "AES256": 32}
 
 '''
-variables tracking encryption session keys
+variables tracking encryption session and preferences
 '''
 master_key = b''
 encryption_key = b''
 hmac_key = b''
 encryption_scheme = {}
+user_choice = ""
+file_path = ""
+password = ""
 
 '''
 main()-ish
 	* Collect info from configuration file
 	* Create master key
 '''
-encryptFile()
+greeting()
+# encryptFile()
+# decryptFile()
+
+print("Password: ", password)
+print("File Path: ", file_path)
+print("User Choice: ", user_choice)
 
 
 

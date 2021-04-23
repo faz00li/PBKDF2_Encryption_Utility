@@ -1,4 +1,18 @@
-encrypt actual file
-add through file path
+* encrypt actual file
 
-h = HMAC.new(hmac_key, digestmod=hash_library[encryption_scheme['hashType']])
+* add through file path
+
+
+To consider:
+
+validate params:
+
+master keys PBKDF2
+	* dkLen 
+		Due to a flaw in the PBKDF2 design, you should not request more bytes than the prf can output. For instance, dkLen should not exceed 20 bytes in combination with HMAC-SHA1.
+	* salt
+		It is recommended to use at least 16 bytes.
+
+Get more keys:
+key1 = keys[:32]
+key2 = keys[32:]
