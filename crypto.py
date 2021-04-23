@@ -66,7 +66,7 @@ def createMasterKey():
 		master_salt = get_random_bytes(16)
 		human_master_salt = b64encode(master_salt).decode('utf-8')
 		encryption_scheme['masterSalt'] = human_master_salt
-		print("Encryption Master Salt: ", human_master_salt, end="\n")
+		print("Human encryption Master Salt: ", human_master_salt, end="\n")
 	else:
 		master_salt = encryption_scheme['masterSalt'].encode()
 		print("Decryption Master Salt: ", master_salt, end="\n")
@@ -82,10 +82,15 @@ createEncryptionKey(master_key, count=1)
 	* use for encryption
 ''' 
 def createEncryptionKey(master_key, count=1):
-	encryption_salt = get_random_bytes(16)
-	human_encryption_salt = b64encode(encryption_salt).decode('utf-8')
-	encryption_scheme['encryptionSalt'] = human_encryption_salt
-	print("Encryption Salt: ", human_encryption_salt, end="\n")
+	if encryption_scheme['encryptionSalt'] == "none":
+		encryption_salt = get_random_bytes(16)
+		human_encryption_salt = b64encode(encryption_salt).decode('utf-8')
+		encryption_scheme['encryptionSalt'] = human_encryption_salt
+		print("Human Encryption Salt: ", human_encryption_salt, end="\n")
+	else:
+		encryption_salt = encryption_scheme['encryptionSalt']
+		print("Decryption Encryption Salt: ", encryption_salt, end="\n")
+
 	return createKey(master_key, count, encryption_salt)
 
 '''
@@ -94,12 +99,16 @@ createHmacKey(master_key, count=1)
 	* use for message authentication
 '''
 def createHmacKey(master_key, count=1):
-	hmac_salt = get_random_bytes(16)
-	human_hmac_salt = b64encode(hmac_salt).decode('utf-8')
-	encryption_scheme['hmacSalt'] = human_hmac_salt
-	print("HMAC Salt: ", human_hmac_salt, end="\n")
-	return createKey(master_key, count, hmac_salt)
+	if encryption_scheme['hmacSalt'] == "none":
+		hmac_salt = get_random_bytes(16)
+		human_hmac_salt = b64encode(hmac_salt).decode('utf-8')
+		encryption_scheme['hmacSalt'] = human_hmac_salt
+		print("Human HMAC Salt: ", human_hmac_salt, end="\n")
+	else:
+		hmac_salt = encryption_scheme['hmacSalt']
+		print("Decryption HMAC Salt: ", hmac_salt, end="\n")
 
+	return createKey(master_key, count, hmac_salt)
 '''
 createKey(password, count)
 	* generate a single key, dictated by args, that can be used as a:
@@ -196,9 +205,13 @@ def decryptFile():
 	initEncryptionScheme()
 
 	master_key = createMasterKey()
-	print(master_key)
+	print("Master Key", master_key)
 
+	encryption_key = createEncryptionKey(master_key)
+	print("Encryption Key", encryption_key)
 
+	hmac_key = createHmacKey(master_key)
+	print("HMAC Key", hmac_key)
 
 '''
 Dictionaries of hash modules and info about encrytion standards
