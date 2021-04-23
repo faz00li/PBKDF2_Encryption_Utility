@@ -18,8 +18,10 @@ def initEncryptionScheme():
 	with open('config_file') as config_file:
 		global encryption_scheme
 		encryption_scheme = json.load(config_file)
-
-		print(json.dumps(encryption_scheme, indent=1, separators=("\n", ":")), end="\n\n")
+		# TODO make sure password is successfuly stored in schema
+		password = input('Enter password... ')
+		encryption_scheme['password'] = password
+		print("Gathering encryption configuration sesttings: \n Encryption Scheme: ", json.dumps(encryption_scheme, indent=1), end="\n")
 
 '''
 createMasterKey()
@@ -27,11 +29,14 @@ createMasterKey()
 	* passes the password and count paramete to createKey()
 '''
 def createMasterKey():
+	# TODO ask user for password here
+	# TODO remove password field from config file and here
 	password = encryption_scheme['password']
 	count = encryption_scheme['count']
 	master_salt = get_random_bytes(16)
 	human_master_salt = b64encode(master_salt).decode('utf-8')
-	encryption_scheme["masterSalt"] = human_master_salt
+	encryption_scheme['masterSalt'] = human_master_salt
+	print("Master Salt: ", human_master_salt, end="\n")
 	return createKey(password, count, master_salt)
 
 '''
@@ -42,7 +47,8 @@ createEncryptionKey(master_key, count=1)
 def createEncryptionKey(master_key, count=1):
 	encryption_salt = get_random_bytes(16)
 	human_encryption_salt = b64encode(encryption_salt).decode('utf-8')
-	encryption_scheme["encryptionSalt"] = human_encryption_salt
+	encryption_scheme['encryptionSalt'] = human_encryption_salt
+	print("Encryption Salt: ", human_encryption_salt, end="\n")
 	return createKey(master_key, count, encryption_salt)
 
 '''
@@ -53,7 +59,8 @@ createHmacKey(master_key, count=1)
 def createHmacKey(master_key, count=1):
 	hmac_salt = get_random_bytes(16)
 	human_hmac_salt = b64encode(hmac_salt).decode('utf-8')
-	encryption_scheme["hmacSalt"] = human_hmac_salt
+	encryption_scheme['hmacSalt'] = human_hmac_salt
+	print("HMAC Salt: ", human_hmac_salt, end="\n")
 	return createKey(master_key, count, hmac_salt)
 
 '''
@@ -64,39 +71,51 @@ createKey(password, count)
 		> message authentication key
 '''
 def createKey(password: str, count: int, salt: b''):
-	
 	dkLen = standard_key_length[encryption_scheme['encryptionType']]
-	print("KEY LENGTH: ", dkLen)
 	hash_type = hash_library[encryption_scheme['hashType']]
 	return PBKDF2(password, salt, dkLen, count, hmac_hash_module=hash_type)
 
-# '''
-# encryptDocument(encryption_key)
-# 	* convert plaintext to byte arrey 
-# 	* pad byte array to appropriate block size
-# 	* encrypt document in manner specified by config schema w/ CBC mode
-# 	* output IV and ciphertext to console
-# '''
-# def encryptDocument(encryption_key):
-# 	bytes_plaintext = encryption_scheme['instructions'].encode()
+'''
+encryptDocument(encryption_key)
+	* convert plaintext to byte arrey 
+	* pad byte array to appropriate block size
+	* encrypt document in manner specified by config schema w/ CBC mode
+	* output IV and ciphertext to console
+'''
+def encryptDocument(encryption_key):
+	# TODO pull from file -> encryption_scheme['filePath'], open file, etc.
+	bytes_file_contents = encryption_scheme['instructions'].encode()
 
-# 	# TODO remove development code de-bugging
-# 	print("ENCRYPTING DOCUMENT:")
-# 	print("Key: \t\t\t", encryption_key)
-# 	print("Key Type: \t\t", type(encryption_key))
-# 	print("Key Length: \t\t", len(encryption_key))
-# 	print("Plain Text: ", encryption_scheme["instructions"], end="\n\n")
-# 	print("Plain Text in Binary: ", bytes_plaintext)
 
-# 	cipher = AES.new(encryption_key, AES.MODE_CBC)
-# 	# TODO paramaterize padding to appropriate encryption algorithm
-# 	# TODO paramaterize encryption algorithm 
-# 	bytes_ciphertext = cipher.encrypt(pad(bytes_plaintext, AES.block_size))
-# 	human_iv = b64encode(cipher.iv).decode('utf-8')
-# 	human_ciphertext = b64encode(bytes_ciphertext).decode('utf-8')
-# 	result = json.dumps({'iv':human_iv, 'ciphertext':human_ciphertext})
-# 	print("\n\n", result)
-# 	# TODO create object to return
+	cipher = AES.new(encryption_key, AES.MODE_CBC)
+	# TODO paramaterize padding to appropriate encryption algorithm
+	# TODO paramaterize encryption algorithm 
+	bytes_ciphertext = cipher.encrypt(pad(bytes_file_contents, AES.block_size))
+	human_iv = b64encode(cipher.iv).decode('utf-8')
+	human_ciphertext = b64encode(bytes_ciphertext).decode('utf-8')
+	
+	encryption_scheme['iv'] = human_iv
+	encryption_scheme['ciphertext'] = human_ciphertext
+
+'''
+encryptFile()
+	* branch of code execution for file encryption
+	* collects password from user
+	* calls helper functions
+'''
+def encryptFile():
+	initEncryptionScheme() 
+
+	master_key = createMasterKey()
+	encryption_key = createEncryptionKey(master_key)
+	hmac_key = createHmacKey(master_key)
+
+	print("Master Key: ", master_key, end='\n') 
+	print("Encryption Key: ", encryption_key, end='\n')
+	print("HMAC Key: ", hmac_key, end='\n')
+
+	encryptDocument(encryption_key)
+	print("Encryption Scheme: \n", json.dumps(encryption_scheme, indent=1, skipkeys=True), end="\n") 
 
 '''
 Dictionaries of hash modules and info about encrytion standards
@@ -118,20 +137,8 @@ main()-ish
 	* Collect info from configuration file
 	* Create master key
 '''
-initEncryptionScheme() 
-master_key = createMasterKey()
-print("Master Key: ", master_key, end='\n\n') 
+encryptFile()
 
-
-encryption_key = createEncryptionKey(master_key)
-print("Encryption Key: ", encryption_key, end='\n\n')
-
-hmac_key = createHmacKey(master_key)
-print("HMAC Key: ", hmac_key, end='\n\n')
-
-print("AMENDED DICTIONARY:", encryption_scheme)
-
-# encryptDocument(encryption_key)
 
 
 
