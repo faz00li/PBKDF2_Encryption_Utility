@@ -1,2 +1,4 @@
 encrypt actual file
 add through file path
+
+h = HMAC.new(hmac_key, digestmod=hash_library[encryption_scheme['hashType']])

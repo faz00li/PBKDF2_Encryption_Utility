@@ -107,17 +107,28 @@ def encryptDocument(encryption_key):
 
 '''
 authenticateMessage()
-	* encryption scheme dictionary > to string > to bytes
-	* derive HMAC and store in dictionary
+	* iv + ciphertext > to string > to bytes
+	* derive HMAC from bytes
+	* store HMAC in dictionary
 '''
 def authenticateMessage():
-	h = HMAC.new(hmac_key, digestmod=SHA256)
+	h = HMAC.new(hmac_key, digestmod=hash_library[encryption_scheme['hashType']])
 	
-	string_file_metadata = json.dumps(encryption_scheme)
+	string_file_metadata = encryption_scheme['iv'] + encryption_scheme['ciphertext']
 	bytes_file_metadata = string_file_metadata.encode()
 	h.update(bytes_file_metadata)
 	encryption_scheme['HMAC: '] = h.hexdigest()
-	
+
+'''
+saveEncryptedFile()
+'''
+def saveEncryptedFile():
+	# TODO parse filePath to get file name to label new file
+	file_name = "encrypted file"
+	encrypted_file = open(file_name, "wb")
+	string_encrypted_file = json.dumps(encryption_scheme)
+	bytes_encrypted_file = string_encrypted_file.encode()
+	encrypted_file.write(bytes_encrypted_file)	
 
 '''
 encryptFile()
@@ -140,17 +151,9 @@ def encryptFile():
 	
 	authenticateMessage()
 
+	saveEncryptedFile()
+
 	print("Encryption Scheme: \n", json.dumps(encryption_scheme, indent=1, skipkeys=True), end="\n") 
-
-'''
-saveEncryptedFile()
-	* does what it says on the tin
-'''
-def saveEncryptedFile():
-	# TODO parse filePath to get file name to label new file
-	open()
-
-
 
 '''
 Dictionaries of hash modules and info about encrytion standards
