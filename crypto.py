@@ -19,7 +19,6 @@ greeting()
 	* collect user preferences, file path and password
 '''
 def greeting():
-	global user_choice
 	global password
 	global file_path
 	
@@ -28,6 +27,8 @@ def greeting():
 	file_path = input('Enter path to file')
 	password = input('Enter password') 
 
+	return user_choice
+
 '''
 initEncryptionScheme()
 	* opens the configuration file
@@ -35,20 +36,22 @@ initEncryptionScheme()
 	* prints schema contents to console
 '''
 def initEncryptionScheme():
-	# TODO make sure password used is one entered by user in greeting()
-	# TODO file called is one entered by user in greeting()
 	global encryption_scheme
+	
+	# # TODO uncomment this and use as actual code 
+	# with  open('file_path') as document:
+	# 	encryption_scheme = json.load(document)
+	# 	encryption_scheme['password'] = password 
+	#		encryption_scheme['filePath'] = file_path
 
 	# with open('config_file') as config_file:
 		# encryption_scheme = json.load(config_file)
 	
 	with open('encrypted_file') as encrypted_file:
 		encryption_scheme = json.load(encrypted_file)
-		# TODO write collected password to encryption_scheme
 
 		print("ENCRYPTION SCHEME TYPE: ", type(encryption_scheme))
-
-		print("Gathering encryption configuration sesttings: \n Encryption Scheme: ", json.dumps(encryption_scheme, indent=1), end="\n")
+		print("CONFIGURATION SETTINGS:\n", json.dumps(encryption_scheme, indent=1), end="\n")
 
 '''
 createMasterKey()
@@ -221,10 +224,13 @@ main()-ish
 	* Collect info from configuration file
 	* Create master key
 '''
-# greeting()
-# encryptFile()
-decryptFile()
+# user_choice = greeting()
+# if user_choice == 1:
+	# encryptFile()
+# else:
+	# decryptFile()
 
+decryptFile()
 # print("Password: ", password)
 # print("File Path: ", file_path)
 # print("User Choice: ", user_choice)
