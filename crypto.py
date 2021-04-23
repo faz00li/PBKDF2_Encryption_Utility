@@ -1,12 +1,18 @@
 from base64 import b64encode
 from Crypto.Cipher import AES
-from Crypto.Protocol.KDF import PBKDF2
 from Crypto.Random import get_random_bytes
+
 from Crypto.Util.Padding import pad
+from Crypto.Protocol.KDF import PBKDF2
 
 import json
-import Crypto.Hash.SHA256
-import Crypto.Hash.SHA512
+# import Crypto.Hash.SHA256
+# import Crypto.Hash.SHA512
+# from Crypto.Hash import HMAC
+
+from Crypto.Hash import HMAC
+from Crypto.Hash import SHA256
+from Crypto.Hash import SHA512
 
 '''
 initEncryptionScheme()
@@ -19,8 +25,11 @@ def initEncryptionScheme():
 		global encryption_scheme
 		encryption_scheme = json.load(config_file)
 		# TODO make sure password is successfuly stored in schema
-		password = input('Enter password... ')
-		encryption_scheme['password'] = password
+		# password = input('Enter password... ')
+		# encryption_scheme['password'] = password
+
+		print("ENCRYPTION SCHEME TYPE: ", type(encryption_scheme))
+
 		print("Gathering encryption configuration sesttings: \n Encryption Scheme: ", json.dumps(encryption_scheme, indent=1), end="\n")
 
 '''
@@ -86,7 +95,6 @@ def encryptDocument(encryption_key):
 	# TODO pull from file -> encryption_scheme['filePath'], open file, etc.
 	bytes_file_contents = encryption_scheme['instructions'].encode()
 
-
 	cipher = AES.new(encryption_key, AES.MODE_CBC)
 	# TODO paramaterize padding to appropriate encryption algorithm
 	# TODO paramaterize encryption algorithm 
@@ -96,6 +104,20 @@ def encryptDocument(encryption_key):
 	
 	encryption_scheme['iv'] = human_iv
 	encryption_scheme['ciphertext'] = human_ciphertext
+
+'''
+authenticateMessage()
+	* encryption scheme dictionary > to string > to bytes
+	* derive HMAC and store in dictionary
+'''
+def authenticateMessage():
+	h = HMAC.new(hmac_key, digestmod=SHA256)
+	
+	string_file_metadata = json.dumps(encryption_scheme)
+	bytes_file_metadata = string_file_metadata.encode()
+	h.update(bytes_file_metadata)
+	encryption_scheme['HMAC: '] = h.hexdigest()
+	
 
 '''
 encryptFile()
@@ -115,13 +137,27 @@ def encryptFile():
 	print("HMAC Key: ", hmac_key, end='\n')
 
 	encryptDocument(encryption_key)
+	
+	authenticateMessage()
+
 	print("Encryption Scheme: \n", json.dumps(encryption_scheme, indent=1, skipkeys=True), end="\n") 
+
+'''
+saveEncryptedFile()
+	* does what it says on the tin
+'''
+def saveEncryptedFile():
+	# TODO parse filePath to get file name to label new file
+	open()
+
+
 
 '''
 Dictionaries of hash modules and info about encrytion standards
 Can be easily updated for purposes of crypto-agility
 '''
-hash_library = {"SHA256": Crypto.Hash.SHA256, "SHA512": Crypto.Hash.SHA512}
+# hash_library = {"SHA256": Crypto.Hash.SHA256, "SHA512": Crypto.Hash.SHA512}
+hash_library = {"SHA256": SHA256, "SHA512": SHA512}
 standard_key_length = {"3DES": 8, "AES128": 16, "AES256": 32}
 
 '''
