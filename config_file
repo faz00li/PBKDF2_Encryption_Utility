@@ -6,11 +6,11 @@
 	"filePath": "/path/to/file",
  	"count": 1000,
 	"HMAC": "",
-	"masterSalt": "",
-	"encryptionSalt": "",
-	"hmacSalt": "",
-	"iv": "",
-	"ciphertext": "",
+	"masterSalt": "none",
+	"encryptionSalt": "none",
+	"hmacSalt": "none",
+	"iv": "none",
+	"ciphertext": "none",
  	
 	"password": "password"
  }

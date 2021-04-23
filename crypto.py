@@ -44,25 +44,33 @@ def initEncryptionScheme():
 	
 	with open('encrypted_file') as encrypted_file:
 		encryption_scheme = json.load(encrypted_file)
+		# TODO write collected password to encryption_scheme
 
 		print("ENCRYPTION SCHEME TYPE: ", type(encryption_scheme))
-		
+
 		print("Gathering encryption configuration sesttings: \n Encryption Scheme: ", json.dumps(encryption_scheme, indent=1), end="\n")
 
 '''
 createMasterKey()
 	* generate a master key w/ PBKDF2 standard
+	* differntiate btw/ encryption/decryption based on config values
 	* passes the password and count paramete to createKey()
 '''
 def createMasterKey():
 	# TODO ask user for password here
 	# TODO remove password field from config file and here
+	if encryption_scheme['masterSalt'] == "none":
+		master_salt = get_random_bytes(16)
+		human_master_salt = b64encode(master_salt).decode('utf-8')
+		encryption_scheme['masterSalt'] = human_master_salt
+		print("Encryption Master Salt: ", human_master_salt, end="\n")
+	else:
+		master_salt = encryption_scheme['masterSalt'].encode()
+		print("Decryption Master Salt: ", master_salt, end="\n")
+
 	password = encryption_scheme['password']
 	count = encryption_scheme['count']
-	master_salt = get_random_bytes(16)
-	human_master_salt = b64encode(master_salt).decode('utf-8')
-	encryption_scheme['masterSalt'] = human_master_salt
-	print("Master Salt: ", human_master_salt, end="\n")
+
 	return createKey(password, count, master_salt)
 
 '''
@@ -183,6 +191,11 @@ decryptFile()
 '''
 def decryptFile():
 	initEncryptionScheme()
+
+	master_key = createMasterKey()
+	print(master_key)
+
+
 
 '''
 Dictionaries of hash modules and info about encrytion standards
