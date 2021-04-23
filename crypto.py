@@ -35,14 +35,18 @@ initEncryptionScheme()
 	* prints schema contents to console
 '''
 def initEncryptionScheme():
-		# TODO make sure password used is one entered by user in greeting()
+	# TODO make sure password used is one entered by user in greeting()
+	# TODO file called is one entered by user in greeting()
+	global encryption_scheme
+
+	# with open('config_file') as config_file:
+		# encryption_scheme = json.load(config_file)
 	
-	with open('config_file') as config_file:
-		global encryption_scheme
-		encryption_scheme = json.load(config_file)
+	with open('encrypted_file') as encrypted_file:
+		encryption_scheme = json.load(encrypted_file)
 
 		print("ENCRYPTION SCHEME TYPE: ", type(encryption_scheme))
-
+		
 		print("Gathering encryption configuration sesttings: \n Encryption Scheme: ", json.dumps(encryption_scheme, indent=1), end="\n")
 
 '''
@@ -137,7 +141,7 @@ saveEncryptedFile()
 '''
 def saveEncryptedFile():
 	# TODO parse filePath to get file name to label new file
-	file_name = "encrypted file"
+	file_name = "encrypted_file"
 	encrypted_file = open(file_name, "wb")
 	string_encrypted_file = json.dumps(encryption_scheme)
 	bytes_encrypted_file = string_encrypted_file.encode()
@@ -178,7 +182,7 @@ decryptFile()
 	* decrypt
 '''
 def decryptFile():
-	print("work to do here")
+	initEncryptionScheme()
 
 '''
 Dictionaries of hash modules and info about encrytion standards
@@ -204,13 +208,13 @@ main()-ish
 	* Collect info from configuration file
 	* Create master key
 '''
-greeting()
+# greeting()
 # encryptFile()
-# decryptFile()
+decryptFile()
 
-print("Password: ", password)
-print("File Path: ", file_path)
-print("User Choice: ", user_choice)
+# print("Password: ", password)
+# print("File Path: ", file_path)
+# print("User Choice: ", user_choice)
 
 
 
