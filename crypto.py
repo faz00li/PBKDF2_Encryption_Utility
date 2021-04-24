@@ -154,7 +154,7 @@ def authenticateMessage():
 	string_file_metadata = encryption_scheme['iv'] + encryption_scheme['ciphertext']
 	bytes_file_metadata = string_file_metadata.encode()
 	h.update(bytes_file_metadata)
-	encryption_scheme['HMAC: '] = h.hexdigest()
+	encryption_scheme['HMAC'] = h.hexdigest()
 
 '''
 saveEncryptedFile()
@@ -193,6 +193,30 @@ def encryptFile():
 	# print("Encryption Scheme: \n", json.dumps(encryption_scheme, indent=1, skipkeys=True), end="\n") 
 
 '''
+authenticate()
+	* hmac(authenticate iv + cipher text)
+'''
+def verifyAuthentication():
+	print("OLD MAC HASH:", encryption_scheme['HMAC'])
+	h = HMAC.new(hmac_key, digestmod=hash_library[encryption_scheme['hashType']])
+
+	string_file_metadata = encryption_scheme['iv'] + encryption_scheme['ciphertext']
+	bytes_file_metadata = string_file_metadata.encode()
+
+	h.update(bytes_file_metadata)
+	# TAG = h.hexdigest()
+	# print("NEW MAC HASH:", TAG)
+	# print("OLD MAC HASH:", encryption_scheme['HMAC'])
+
+	try:
+		h.hexverify(encryption_scheme['HMAC'])
+		print("The message '%s' is authentic" % encryption_scheme['HMAC'])
+		return True
+	except ValueError:
+		print("The message or the key is wrong")
+		return False
+
+'''
 decryptFile()
 	* determine file path and name from config
 	* extract salts
@@ -212,6 +236,10 @@ def decryptFile():
 
 	hmac_key = createHmacKey(master_key)
 	print("HMAC Key", hmac_key)
+
+	isVerified = verifyAuthentication()
+
+	print(isVerified)
 
 '''
 Dictionaries of hash modules and info about encrytion standards
@@ -243,7 +271,9 @@ main()-ish
 # else:
 	# decryptFile()
 
+# encryptFile()
 decryptFile()
+
 # print("Password: ", password)
 # print("File Path: ", file_path)
 # print("User Choice: ", user_choice)
