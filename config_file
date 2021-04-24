@@ -5,12 +5,11 @@
 	"hashType": "SHA256",
 	"filePath": "/path/to/file",
  	"count": 1000,
-	"HMAC": "",
+	"HMAC": "none",
 	"masterSalt": "none",
 	"encryptionSalt": "none",
 	"hmacSalt": "none",
 	"iv": "none",
 	"ciphertext": "none",
- 	
 	"password": "password"
  }
