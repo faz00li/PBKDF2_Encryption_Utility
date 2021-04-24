@@ -3,6 +3,7 @@ from Crypto.Cipher import AES
 from Crypto.Random import get_random_bytes
 
 from Crypto.Util.Padding import pad
+from Crypto.Util.Padding import unpad
 from Crypto.Protocol.KDF import PBKDF2
 
 import json
@@ -217,6 +218,22 @@ def verifyAuthentication():
 		return False
 
 '''
+decryptDocument()
+'''
+def decryptDocument():
+	# TODO paramaterize padding to appropriate encryption algorithm
+	# TODO paramaterize encryption algorithm 
+	cipher = AES.new(encryption_key, AES.MODE_CBC)
+
+	bytes_file_contents_pad = encryption_scheme['ciphertext'].encode()
+	bytes_plaintext = cipher.decrypt(unpad(bytes_file_contents_pad, standard_key_length[encryption_scheme['encryptionType']]))
+	human_iv = b64encode(cipher.iv).decode('utf-8')
+	human_ciphertext = b64encode(bytes_ciphertext).decode('utf-8')
+	
+	encryption_scheme['plaintext'] = human_iv
+	
+	
+'''
 decryptFile()
 	* determine file path and name from config
 	* extract salts
@@ -238,8 +255,12 @@ def decryptFile():
 	print("HMAC Key", hmac_key)
 
 	isVerified = verifyAuthentication()
+	print("hashes match: ", isVerified)
 
-	print(isVerified)
+	if isVerified == False:
+		exit()
+
+	
 
 '''
 Dictionaries of hash modules and info about encrytion standards
