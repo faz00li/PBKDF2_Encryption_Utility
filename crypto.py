@@ -22,8 +22,8 @@ def initEncryptionScheme():
     print("initEncryptionScheme()")
 
 def getPlaintext():
-  print("*******************FILE PATH:", encryption_scheme['filePath'])
-  with open(encryption_scheme['filePath']) as f:
+  print("getPlain"", encryption_scheme['filePath'])
+  with open(encryption_scheme['filePath'],"rb") as f:
     plaintext = f.read()
     print(plaintext)
 

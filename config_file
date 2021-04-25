@@ -1,6 +1,7 @@
 {
 	"password": "password",
-	"filePath": "/home/seed/Documents/PBKDF2_Encryption_Utility/README.md",
+	"filePath1": "/home/seed/Documents/PBKDF2_Encryption_Utility/README.md",
+	"filePath": "/home/seed/Documents/PBKDF2_Encryption_Utility/ProdComp.xlsx",
 	"encryptionType": "AES128",
 	"hashType": "SHA256",
  	"count": 1000,

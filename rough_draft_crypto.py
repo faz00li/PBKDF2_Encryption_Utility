@@ -25,7 +25,7 @@ def greeting():
 	return user_choice
 
 '''
-initEncryptionScheme()
+initEncryptionScheme() -----> trnasfered
 	* opens the configuration file
 	* parses parameters into dictionary
 	* prints schema contents to console
@@ -171,9 +171,9 @@ encryptFile()
 def encryptFile():
 	global master_key, encryption_key, hmac_key
 	
-	initEncryptionScheme() 
+	initEncryptionScheme()# T
 
-	master_key = createMasterKey()
+	master_key = createMasterKey()# W
 	encryption_key = createEncryptionKey(master_key)
 	hmac_key = createHmacKey(master_key)
 
@@ -296,8 +296,8 @@ main()-ish
 # else:
 	# decryptFile()
 
-# encryptFile()
-decryptFile()
+encryptFile()
+# decryptFile()
 
 # print("Password: ", password)
 # print("File Path: ", file_path)
