@@ -123,7 +123,7 @@ encryptDocument(encryption_key)
 	* encrypt document in manner specified by config schema w/ CBC mode
 	* output IV and ciphertext to console
 '''
-def encryptDocument(encryption_key):
+def encryptDocument():
 	# TODO pull from file -> encryption_scheme['filePath'], open file, etc.
 	bytes_file_contents = encryption_scheme['instructions'].encode()
 
