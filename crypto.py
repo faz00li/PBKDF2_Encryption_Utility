@@ -12,6 +12,7 @@ import binascii
 DEBUG = 0
 DEBUG_INTERNAL = 0
 DEBUG_INTERNAL_CREATE_KEY = 0
+DEBUG_FINAL_FILE = 1
 
 '''
 initEncryptionScheme()
@@ -192,11 +193,17 @@ addHeader(master_key, encryption_key, hmac_key, iv_ciphertext)
 	* add header to ciphertext
 	* return header and ciphertext as string 
 '''
-def addHeader(master_key, encryption_key, hmac_key, iv_ciphertext):
-	# encryption_scheme['masterKey'] = binascii.hexlify(master_key).decode()
-	# encryption_scheme['encryptionKey'] = binascii.hexlify(encryption_key).decode()
-	# encryption_scheme['hmacKey'] = binascii.hexlify(hmac_key).decode()
-	# saveEncryptedFile()
+def addHeader():
+	print("addHeader()")
+
+	hpd = "_"
+	cd = "???"
+	
+	finalFile = encryption_scheme['HMAC'] + hpd + encryption_scheme['kdf'] + hpd + str(encryption_scheme['count']) + hpd + encryption_scheme['iv'] \
+		+ hpd + encryption_scheme['encryptionType'] + hpd + encryption_scheme['hashType'] + hpd + encryption_scheme['masterSalt'] + hpd \
+			 + encryption_scheme['encryptionSalt'] + hpd + encryption_scheme['hmacSalt'] + cd + encryption_scheme['ciphertext']
+	
+	return finalFile
 
 '''
 saveEncryptedFile()
@@ -258,7 +265,14 @@ if DEBUG:
 	print("HMAC Type: ", type(hmac))
 	print("HMAC: ", hmac, end='\n\n')
 
-finalFile = addHeader(master_key, encryption_key, hmac_key, iv_ciphertext)
+encryption_scheme['HMAC'] = hmac
+encryption_scheme['iv'] = binascii.hexlify(iv).decode()
+encryption_scheme['ciphertext'] = binascii.hexlify(ciphertext).decode()
+
+finalFile = addHeader()
+
+if DEBUG_FINAL_FILE:
+	print("Final File: \n", finalFile, end='\n\n')
 
 
 
