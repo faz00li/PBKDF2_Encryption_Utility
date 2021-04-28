@@ -9,9 +9,9 @@ from Crypto.Util.Padding import pad, unpad
 import json
 import binascii
 
-DEBUG = 1
-DEBUG_INTERNAL = 1
-DEBUG_INTERNAL_CREATE_KEY = 1
+DEBUG = 0
+DEBUG_INTERNAL = 0
+DEBUG_INTERNAL_CREATE_KEY = 0
 
 '''
 initEncryptionScheme()
@@ -77,7 +77,7 @@ createMasterKey()
 def createMasterKey():
 	print("createMasterKey()")
 	if encryption_scheme['masterSalt'] == "none":
-		print("Encryption Branch: ")
+		print("Encryption Branch: ", end="\n\n")
 		generateSalts()
 	else:
 		print("Decryption Branch: ")
@@ -160,10 +160,10 @@ def encryptDocument(encryption_key, plaintext):
 
 	if DEBUG_INTERNAL:
 
-		print("IV Type: ", type(iv), end='\n\n')
+		print("IV Type: ", type(iv))
 		print("IV: ", iv, end='\n\n')
 
-		print("Ciphertext Type: ", type(ciphertext), end='\n\n')
+		print("Ciphertext Type: ", type(ciphertext))
 		print("Ciphertext: ", ciphertext, end='\n\n')
 
 	return iv, ciphertext
@@ -183,9 +183,20 @@ def authenticateEncryption(hmac_key, iv_ciphertext):
 
 	if DEBUG_INTERNAL:
 		print("HMAC Type:", type(hmac))
-		print("HMAC:", hmac)
+		print("HMAC:", hmac, end='\n\n')
 
 	return hmac
+
+'''
+addHeader(master_key, encryption_key, hmac_key, iv_ciphertext)
+	* add header to ciphertext
+	* return header and ciphertext as string 
+'''
+def addHeader(master_key, encryption_key, hmac_key, iv_ciphertext):
+	# encryption_scheme['masterKey'] = binascii.hexlify(master_key).decode()
+	# encryption_scheme['encryptionKey'] = binascii.hexlify(encryption_key).decode()
+	# encryption_scheme['hmacKey'] = binascii.hexlify(hmac_key).decode()
+	# saveEncryptedFile()
 
 '''
 saveEncryptedFile()
@@ -224,36 +235,31 @@ iv, ciphertext = encryptDocument(encryption_key, plaintext)
 iv_ciphertext = iv + ciphertext
 hmac = authenticateEncryption(hmac_key, iv_ciphertext)
 
-
 if DEBUG:
+	print("FULL DEBUG")
 	print("Plaintext Type: ", type(plaintext))
 	print("Plaintext: ", plaintext, end='\n\n')
 
 	print("Master Key Type: ", type(master_key))
-	print("Plaintext: ", master_key, end='\n\n')
+	print("Master Key: ", master_key, end='\n\n')
 
 	print("Encryption Key Type: ", type(encryption_key))
-	print("Plaintext: ", encryption_key, end='\n\n')
+	print("Encryption Key: ", encryption_key, end='\n\n')
 
 	print("HMAC Key Type: ", type(hmac_key))
-	print("Plaintext: ", hmac_key, end='\n\n')
+	print("HMAC Key: ", hmac_key, end='\n\n')
 
+	print("IV Type: ", type(iv))
 	print("IV: ", iv, end='\n\n')
-	print("IV: ", type(iv), end='\n\n')
 
-	print("Ciphertext Type: ", ciphertext, end='\n\n')
-	print("Ciphertext: ", type(ciphertext), end='\n\n')
+	print("Ciphertext Type: ", type(ciphertext))
+	print("Ciphertext: ", ciphertext, end='\n\n')
 
-	print("HMAC Type: ", hmac, end='\n\n')
-	print("HMAC: ", type(hmac), end='\n\n')
+	print("HMAC Type: ", type(hmac))
+	print("HMAC: ", hmac, end='\n\n')
 
+finalFile = addHeader(master_key, encryption_key, hmac_key, iv_ciphertext)
 
-
-
-# encryption_scheme['masterKey'] = binascii.hexlify(master_key).decode()
-# encryption_scheme['encryptionKey'] = binascii.hexlify(encryption_key).decode()
-# encryption_scheme['hmacKey'] = binascii.hexlify(hmac_key).decode()
-# saveEncryptedFile()
 
 
 
