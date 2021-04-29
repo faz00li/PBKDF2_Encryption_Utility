@@ -9,7 +9,7 @@ from Crypto.Util.Padding import pad, unpad
 import json
 import binascii
 
-DEBUG = 0
+DEBUG = True
 DEBUG_INTERNAL = 1
 DEBUG_INTERNAL_CREATE_KEY = 0
 DEBUG_FINAL_FILE = 0
@@ -309,60 +309,80 @@ if ENCRYPTION_BRANCH:
 #######################################################################
 '''
 initDecryptionScheme()
-	* opens the encrypted file
-	* parses parameters into dictionary
+	* read decryption configuration settings from file
+	* read raw encrypted doc from file
+	* split raw doc into meta data and the file
+	* split meta data into fields
+	* create two dictionaries 1) byte meta data fields 2) string meta data fields
+
 '''
 def initDecryptionScheme():
 	print("initDecryptionScheme()")
 
+	global decryption_scheme
+	global decryption_scheme_bytes
+
 	with open('config_file_decryption') as config_file:
 		conf_scheme = json.load(config_file)
-
-	if DEBUG_INTERNAL:
-		print("Decryption Scheme: ", conf_scheme, end='\n\n')
-	
+		
 	with open(conf_scheme['filePath'], "rb") as encrypted_file:
 		encrypted_doc = encrypted_file.read()
 
-	print("Encrypted Doc Type: ", type(encrypted_doc))
-	# print("Encrypted Doc: \n", encrypted_doc)
-
 	meta_cipher = encrypted_doc.split(bytes("???", "UTF-8"))
 
-	print("Meta of Meta Cipher: ", meta_cipher[0])
-
 	meta = meta_cipher[0].split(bytes("_", "UTF-8"))
+	decryption_scheme_bytes = dict(zip(decryption_params, meta))
+	decryption_scheme_bytes['cipherText'] = meta_cipher[1]
 
-	decryption_scheme = dict(zip(decryption_params, meta))
+	meta_string = []
+	for x in meta:
+		meta_string.append(x.decode())
+	
+	decryption_scheme = dict(zip(decryption_params, meta_string))
 
-	decryption_scheme['cipherText'] = meta_cipher[1]
-	 
-	print("Decryption Scheme: ", decryption_scheme)
+	DEBUG = False
+	if DEBUG:
+		print("Decryption Scheme: ", conf_scheme, end='\n\n')
+		print("Encrypted Doc Type: ", type(encrypted_doc), end='\n\n')
+		# print("Encrypted Doc: \n", encrypted_doc)
+		print("Meta of Meta Cipher Type: ", type(meta_cipher[0]))
+		print("Meta of Meta Cipher: ", meta_cipher[0], end='\n\n')
+		print("Meta String: ", meta_string, end='\n\n')
+		print("Decryption Scheme: ", decryption_scheme_bytes, end='\n\n')
+		print("Decryption Scheme:\n", decryption_scheme, end='\n\n')
 
-	return decryption_scheme
-
-'''
-verifyHmac()
-'''
-def verifyHmac():
-	h = HMAC.new(secret, digestmod=hash_library[hexlify(decryption_scheme['hashType']]).encode())
-	h.update(msg)
-	try:
-		h.hexverify(mac)
-		print("The message '%s' is authentic" % msg)
-	except ValueError:
-		print("The message or the key is wrong")
+# '''
+# verifyHmac()
+# '''
+# def verifyHmac():
+# 	h = HMAC.new(decryption_scheme_bytes['hmacKey'], digestmod=hash_library[decryption_scheme['hashType']])
+# 	h.update(decryption_scheme_bytes['iv'] + decryption_scheme_bytes['ciphertext'])
+# 	try:
+# 		h.hexverify(decryption_scheme['HMAC'])
+# 		print("The message '%s' is authentic" % msg)
+# 	except ValueError:
+# 		print("The message or the key is wrong")
 
 if DECRYPTION_BRANCH:
 	'''
 	variables tracking encryption session and preferences
 	'''
-	# decryption_scheme = {"HMAC": "", "KDF": "", "count": "", "iv": "", "encryptionType": "", "hashType": "", "masterSalt": "", "encryptionSalt": "", "hmacSalt": "" }
 	decryption_params = ["HMAC", "KDF", "count", "iv", "encryptionType", "hashType", "masterSalt", "encryptionSalt", "hmacSalt"]
+	decryption_scheme = {}
+	decryption_scheme_bytes = {}
 
-	decryption_scheme = initDecryptionScheme()
+	initDecryptionScheme()
 
-	verifyHmac()
+	DEBUG = False
+	if DEBUG:
+		print("From Main:\n")
+		print("Decryption Scheme Bytes:\n", decryption_scheme_bytes, end='\n\n')
+		print("Decryption Scheme:\n", decryption_scheme, end='\n\n')
+		
+	# verifyHmac()
+	
+
+	
 
 	
 
