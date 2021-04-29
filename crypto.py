@@ -10,9 +10,9 @@ import json
 import binascii
 
 DEBUG = 0
-DEBUG_INTERNAL = 0
+DEBUG_INTERNAL = 1
 DEBUG_INTERNAL_CREATE_KEY = 0
-DEBUG_FINAL_FILE = 1
+DEBUG_FINAL_FILE = 0
 
 '''
 initEncryptionScheme()
@@ -202,19 +202,39 @@ def addHeader():
 	finalFile = encryption_scheme['HMAC'] + hpd + encryption_scheme['kdf'] + hpd + str(encryption_scheme['count']) + hpd + encryption_scheme['iv'] \
 		+ hpd + encryption_scheme['encryptionType'] + hpd + encryption_scheme['hashType'] + hpd + encryption_scheme['masterSalt'] + hpd \
 			 + encryption_scheme['encryptionSalt'] + hpd + encryption_scheme['hmacSalt'] + cd + encryption_scheme['ciphertext']
+
+	try1 = encryption_scheme['HMAC'] + hpd + encryption_scheme['kdf'] + hpd + str(encryption_scheme['count']) + hpd + encryption_scheme['iv'] \
+		+ hpd + encryption_scheme['encryptionType'] + hpd + encryption_scheme['hashType'] + hpd + encryption_scheme['masterSalt'] + hpd \
+			 + encryption_scheme['encryptionSalt'] + hpd + encryption_scheme['hmacSalt'] 
+	
+	print("Final Header: ", bytes(try1, "UTF-*") )
 	
 	return finalFile
 
 '''
+getFileName()
+	* returns name of encrypted file
+'''
+def getFileName():
+	print("getFileName()")
+	filePathTokens = encryption_scheme['filePath'].split("/")
+	fileName = filePathTokens[len(filePathTokens) -1]
+	fileName = fileName + ".enc" 
+	
+	return fileName
+		
+'''
 saveEncryptedFile()
 '''
-def saveEncryptedFile():
-	# TODO parse filePath to get file name to label new file
-	file_name = "encrypted_file"
-	encrypted_file = json.dumps(encryption_scheme)
+def saveEncryptedFile(finalFile):
+	file_name = getFileName()
 
-	with open(file_name, "wb") as ef:
-		ef.write(encrypted_file)
+	if DEBUG_INTERNAL:
+		print("File Name:", file_name)
+		print("Final File TypeL ", type(finalFile))
+
+	with open(file_name, "wb") as f:
+		f.write(bytes(finalFile, "UTF-8"))
 
 '''
 Dictionaries of hash modules and info about encrytion standards
@@ -274,7 +294,16 @@ finalFile = addHeader()
 if DEBUG_FINAL_FILE:
 	print("Final File: \n", finalFile, end='\n\n')
 
+	encryption_scheme['masterKey'] = binascii.hexlify(master_key).decode()
+	encryption_scheme['encryptionKey'] = binascii.hexlify(master_key).decode()
+	encryption_scheme['hmacKey'] = binascii.hexlify(master_key).decode()
+	encryption_scheme['plainText'] = binascii.hexlify(plaintext).decode()
+	finalFileJson = json.dumps(encryption_scheme)
+	# for key in encryption_scheme.keys():
+	# 	print(key) TODO mess around if needed to compare
+	# print("JSON: ", finalFileJson)
 
+saveEncryptedFile(finalFile)
 
 
 

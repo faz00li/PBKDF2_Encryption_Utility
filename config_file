@@ -1,7 +1,9 @@
 {
 	"password": "password",
 	"mode": "none",
-	"filePath": "/home/seed/Documents/PBKDF2_Encryption_Utility/README.md",
+	"filePath1": "/home/seed/Documents/PBKDF2_Encryption_Utility/README.md",
+	"filePath": "/home/seed/Documents/PBKDF2_Encryption_Utility/racoon_pic",
+	"filePath2": "/home/seed/Documents/PBKDF2_Encryption_Utility/ProdComp.xlsx",
 	"kdf": "PBKDF2",
 	"encryptionType": "AES128",
 	"hashType": "SHA256",
