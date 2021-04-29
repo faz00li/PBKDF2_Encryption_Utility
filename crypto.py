@@ -8,13 +8,14 @@ from Crypto.Util.Padding import pad, unpad
 # Python Modules
 import json
 import binascii
+import sys
 
 DEBUG = True
 DEBUG_INTERNAL = 1
 DEBUG_INTERNAL_CREATE_KEY = 0
 DEBUG_FINAL_FILE = 0
-ENCRYPTION_BRANCH = False
-DECRYPTION_BRANCH = True
+ENCRYPTION_BRANCH = True
+DECRYPTION_BRANCH = False
 
 '''
 initEncryptionScheme()
@@ -349,7 +350,7 @@ def initDecryptionScheme():
 
 	meta = meta_cipher[0].split(bytes("_", "UTF-8"))
 	decryption_scheme_bytes = dict(zip(decryption_params, meta))
-	decryption_scheme_bytes['cipherText'] = meta_cipher[1]
+	decryption_scheme_bytes['cipherext'] = meta_cipher[1]
 
 	meta_string = []
 	for x in meta:
@@ -369,17 +370,17 @@ def initDecryptionScheme():
 		print("Decryption Scheme: ", decryption_scheme_bytes, end='\n\n')
 		print("Decryption Scheme:\n", decryption_scheme, end='\n\n')
 
-
-# verifyHmac()
-# '''
-# def verifyHmac():
-# 	h = HMAC.new(decryption_scheme_bytes['hmacKey'], digestmod=hash_library[decryption_scheme['hashType']])
-# 	h.update(decryption_scheme_bytes['iv'] + decryption_scheme_bytes['ciphertext'])
-# 	try:
-# 		h.hexverify(decryption_scheme['HMAC'])
-# 		print("The message '%s' is authentic" % msg)
-# 	except ValueError:
-# 		print("The message or the key is wrong")
+'''
+verifyHmac()
+'''
+def verifyHmac(master_key):
+	h = HMAC.new(master_key, digestmod=hash_library[decryption_scheme['hashType']])
+	h.update(decryption_scheme_bytes['iv'] + decryption_scheme_bytes['ciphertext'])
+	try:
+		h.hexverify(decryption_scheme['HMAC'])
+		print("The message '%s' is authentic" % msg)
+	except ValueError:
+		print("The message or the key is wrong")
 
 if DECRYPTION_BRANCH:
 	'''
@@ -398,9 +399,8 @@ if DECRYPTION_BRANCH:
 		print("Decryption Scheme:\n", decryption_scheme, end='\n\n')
 	
 	master_key = createMasterKey()
-	print("Master Key: ", master_key)
-
-	# verifyHmac()
+	# print("Master Key: ", master_key)
+	verifyHmac(master_key)
 	
 
 	
