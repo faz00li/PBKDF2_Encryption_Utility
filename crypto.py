@@ -315,8 +315,6 @@ initDecryptionScheme()
 def initDecryptionScheme():
 	print("initDecryptionScheme()")
 
-	global decryption_scheme
-
 	with open('config_file_decryption') as config_file:
 		conf_scheme = json.load(config_file)
 
@@ -341,6 +339,20 @@ def initDecryptionScheme():
 	 
 	print("Decryption Scheme: ", decryption_scheme)
 
+	return decryption_scheme
+
+'''
+verifyHmac()
+'''
+def verifyHmac():
+	h = HMAC.new(secret, digestmod=hash_library[hexlify(decryption_scheme['hashType']]).encode())
+	h.update(msg)
+	try:
+		h.hexverify(mac)
+		print("The message '%s' is authentic" % msg)
+	except ValueError:
+		print("The message or the key is wrong")
+
 if DECRYPTION_BRANCH:
 	'''
 	variables tracking encryption session and preferences
@@ -348,7 +360,9 @@ if DECRYPTION_BRANCH:
 	# decryption_scheme = {"HMAC": "", "KDF": "", "count": "", "iv": "", "encryptionType": "", "hashType": "", "masterSalt": "", "encryptionSalt": "", "hmacSalt": "" }
 	decryption_params = ["HMAC", "KDF", "count", "iv", "encryptionType", "hashType", "masterSalt", "encryptionSalt", "hmacSalt"]
 
-	initDecryptionScheme()
+	decryption_scheme = initDecryptionScheme()
+
+	verifyHmac()
 
 	
 
