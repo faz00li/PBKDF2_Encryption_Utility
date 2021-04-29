@@ -79,15 +79,18 @@ createMasterKey()
 '''
 def createMasterKey():
 	print("createMasterKey()")
-	if encryption_scheme['masterSalt'] == "none":
-		print("Encryption Branch: ", end="\n\n")
-		generateSalts()
-	else:
-		print("Decryption Branch: ")
 
-	master_key = createKey(encryption_scheme['password'], encryption_scheme['count'], encryption_scheme['masterSalt'])
-	
-	if DEBUG_INTERNAL:
+	if ENCRYPTION_BRANCH:	
+		print("Encryption Branch:\n")
+		generateSalts()
+		master_key = createKey(encryption_scheme['password'], encryption_scheme['count'], encryption_scheme['masterSalt'])
+
+	if DECRYPTION_BRANCH:
+		print("Decryption Branch:\n")
+		master_key = createKey(decryption_scheme['password'], int(decryption_scheme['count']), decryption_scheme['masterSalt'])
+
+	DEBUG = True
+	if DEBUG:
 		print("Master Key Type: ", type(master_key))
 		print("Master Key: ", master_key, end='\n\n')
 	
@@ -134,14 +137,29 @@ createKey(password, count)
 '''
 def createKey(password: str, count: int, salt: b''):
 	print("createKey()")
-	dkLen = standard_block_size[encryption_scheme['encryptionType']]
 
-	if DEBUG_INTERNAL_CREATE_KEY:
+	if ENCRYPTION_BRANCH:
+		dkLen = standard_block_size[encryption_scheme['encryptionType']]
+		hash_type = encryption_scheme['hashType']
+		hash_mod = hash_library[encryption_scheme['hashType']]
+
+	if DECRYPTION_BRANCH:
+		dkLen = standard_block_size[decryption_scheme['encryptionType']]
+		hash_type = decryption_scheme['hashType']
+		hash_mod = hash_library[decryption_scheme['hashType']]
+
+	DEBUG_PRE_KEY = True
+	if DEBUG_PRE_KEY:
 		print("Desired Key Length: ", dkLen)
+		print("Encryption Type: ", hash_type )
+		print("Password: ", password)
+		print("Count: ", count)
+		print('Salt: ', salt, end='\n\n')
 
-	key = PBKDF2(password, salt, dkLen, count, hmac_hash_module=hash_library[encryption_scheme['hashType']])
+	key = PBKDF2(password, salt, dkLen, count, hmac_hash_module=hash_mod)
 
-	if DEBUG_INTERNAL_CREATE_KEY:
+	DEBUG_POST_KEY = True
+	if DEBUG_POST_KEY:
 		print("Generic Key Type: ", type(key))
 		print("Generic Key: ", key, end='\n\n')
 	
@@ -314,7 +332,6 @@ initDecryptionScheme()
 	* split raw doc into meta data and the file
 	* split meta data into fields
 	* create two dictionaries 1) byte meta data fields 2) string meta data fields
-
 '''
 def initDecryptionScheme():
 	print("initDecryptionScheme()")
@@ -339,6 +356,7 @@ def initDecryptionScheme():
 		meta_string.append(x.decode())
 	
 	decryption_scheme = dict(zip(decryption_params, meta_string))
+	decryption_scheme['password'] = conf_scheme['password']
 
 	DEBUG = False
 	if DEBUG:
@@ -351,7 +369,7 @@ def initDecryptionScheme():
 		print("Decryption Scheme: ", decryption_scheme_bytes, end='\n\n')
 		print("Decryption Scheme:\n", decryption_scheme, end='\n\n')
 
-# '''
+
 # verifyHmac()
 # '''
 # def verifyHmac():
@@ -378,7 +396,10 @@ if DECRYPTION_BRANCH:
 		print("From Main:\n")
 		print("Decryption Scheme Bytes:\n", decryption_scheme_bytes, end='\n\n')
 		print("Decryption Scheme:\n", decryption_scheme, end='\n\n')
-		
+	
+	master_key = createMasterKey()
+	print("Master Key: ", master_key)
+
 	# verifyHmac()
 	
 
