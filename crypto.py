@@ -9,6 +9,7 @@ from Crypto.Util.Padding import pad, unpad
 import json
 import binascii
 import sys
+import argparse
 
 DEBUG = True
 DEBUG_INTERNAL = 1
@@ -17,62 +18,44 @@ DEBUG_FINAL_FILE = 0
 ENCRYPTION_BRANCH = True
 DECRYPTION_BRANCH = False
 
+###############################################################################
+# Methods for both Encryption and Decryption
+###############################################################################
 '''
-initEncryptionScheme()
-	* opens the configuration file
-	* parses parameters into dictionary
+getArgs()
+	* collect preferences from CLI
 '''
-def initEncryptionScheme():
-	print("initEncryptionScheme()")
+def getArgs():
+	parser = argparse.ArgumentParser(prog="PBKDF2 Encryption Utility", \
+	usage="Program for encrypting and decrypting files. CLI input takes mode of operation, path to file, and the password.")
 
-	global encryption_scheme
+	parser.add_argument("mode", help="[ encrypt | decrypt ]")
+	parser.add_argument("path", help="<file path>")
+	parser.add_argument("password", help="<password>")
 
-	with open('config_file') as config_file:
-		encryption_scheme = json.load(config_file)
+	args = parser.parse_args()
 
-	if DEBUG_INTERNAL:
-		print("Encryption Scheme: ", encryption_scheme, end='\n\n')
-		
-'''
-getPlaintext()
-	* obtain file in raw bytes
-'''
-def getPlaintext():
-	print("getPlaintext()")
+	mode = args.mode
+	file_path = args.path
+	password = args.password
 
-	with open(encryption_scheme['filePath'],"rb") as f:
-		plaintext = f.read()
-
-	if DEBUG_INTERNAL:
-		print("Plaintext: ", plaintext, end='\n\n')
-
-	return plaintext
+	DEBUG = True
+	if DEBUG:
+		print(f"Mode: {mode} File Path: {file_path} Password: {password}")
 	
-'''
-generateSalts()
-  * masterSalt
-  * encryptionSalt
-  * hmacSalt
-'''
-def generateSalts():
-	print("generateSalts()")
+	global encryption_scheme
+	global decryption_scheme
 
-	if DEBUG_INTERNAL:
-		print("Encryption Type: ", encryption_scheme['encryptionType'])
-		print("Key Length: ", standard_block_size[encryption_scheme['encryptionType']])
+	if mode.upper() == 'ENCRYPT':
+		ENCRYPTION_BRANCH = True
+		encryption_scheme['filePath'] = file_path
+		encryption_scheme['password'] = password
+	
+	if mode.upper() == 'DECRYPT':
+		DECRYPTION_BRANCH = True
+		decryption_scheme['filePath'] = file_path
+		decryption_scheme['password'] = password
 
-	encryption_scheme['masterSalt'] = binascii.hexlify(get_random_bytes(standard_block_size[encryption_scheme['encryptionType']])).decode()
-	encryption_scheme['encryptionSalt'] = binascii.hexlify(get_random_bytes(standard_block_size[encryption_scheme['encryptionType']])).decode()
-	encryption_scheme['hmacSalt'] = binascii.hexlify(get_random_bytes(standard_block_size[encryption_scheme['encryptionType']])).decode()
-
-	if DEBUG_INTERNAL:
-		print("Master Salt Type: ", type(encryption_scheme['masterSalt']))
-		print("Master Salt: ", encryption_scheme['masterSalt'])
-		print("Encryption Salt Type: ", type(encryption_scheme['encryptionSalt']))
-		print("Encryption Salt: ", encryption_scheme['encryptionSalt'])
-		print("HMAC Salt Type: ", type(encryption_scheme['hmacSalt']))
-		print("HMAC Salt: ", encryption_scheme['hmacSalt'], end='\n\n')
-		
 '''
 createMasterKey()
 	* generate a master key w/ PBKDF2 standard
@@ -166,6 +149,69 @@ def createKey(password: str, count: int, salt: b''):
 	
 	return key
 
+
+###############################################################################
+# Encryption Methods 
+###############################################################################
+'''
+initEncryptionScheme()
+	* opens the configuration file
+	* parses parameters into dictionary
+'''
+def initEncryptionScheme():
+	print("initEncryptionScheme()")
+
+	global encryption_scheme
+
+	with open('config_file') as config_file:
+		encryption_scheme = json.load(config_file)
+
+	config_file.close()
+
+	DEBUG = False
+	if DEBUG:
+		print("Encryption Scheme: ", encryption_scheme, end='\n\n')
+		
+'''
+getPlaintext()
+	* obtain file in raw bytes
+'''
+def getPlaintext():
+	print("getPlaintext()")
+
+	with open(encryption_scheme['filePath'],"rb") as f:
+		plaintext = f.read()
+
+	if DEBUG_INTERNAL:
+		print("Plaintext: ", plaintext, end='\n\n')
+
+	return plaintext
+	
+'''
+generateSalts()
+  * masterSalt
+  * encryptionSalt
+  * hmacSalt
+'''
+def generateSalts():
+	print("generateSalts()")
+
+	if DEBUG_INTERNAL:
+		print("Encryption Type: ", encryption_scheme['encryptionType'])
+		print("Key Length: ", standard_block_size[encryption_scheme['encryptionType']])
+
+	encryption_scheme['masterSalt'] = binascii.hexlify(get_random_bytes(standard_block_size[encryption_scheme['encryptionType']])).decode()
+	encryption_scheme['encryptionSalt'] = binascii.hexlify(get_random_bytes(standard_block_size[encryption_scheme['encryptionType']])).decode()
+	encryption_scheme['hmacSalt'] = binascii.hexlify(get_random_bytes(standard_block_size[encryption_scheme['encryptionType']])).decode()
+
+	if DEBUG_INTERNAL:
+		print("Master Salt Type: ", type(encryption_scheme['masterSalt']))
+		print("Master Salt: ", encryption_scheme['masterSalt'])
+		print("Encryption Salt Type: ", type(encryption_scheme['encryptionSalt']))
+		print("Encryption Salt: ", encryption_scheme['encryptionSalt'])
+		print("HMAC Salt Type: ", type(encryption_scheme['hmacSalt']))
+		print("HMAC Salt: ", encryption_scheme['hmacSalt'], end='\n\n')
+		
 '''
 encryptDocument(encryption_key)
 	* convert plaintext to byte arrey 
@@ -254,78 +300,9 @@ def saveEncryptedFile(finalFile):
 	with open(file_name, "wb") as f:
 		f.write(finalFile)
 
-'''
-Dictionaries of hash modules and info about encrytion standards
-Can be easily updated for purposes of crypto-agility
-'''
-hash_library = {"SHA256": SHA256, "SHA512": SHA512}
-standard_block_size = {"3DES": 8, "AES128": 16}
-
-'''
-variables tracking encryption session and preferences
-'''
-encryption_scheme = {}
-
-'''
-Encryption Branch
-'''
-if ENCRYPTION_BRANCH:
-	initEncryptionScheme()
-	plaintext = getPlaintext()
-	master_key = createMasterKey()
-	encryption_key = createEncryptionKey(master_key)
-	hmac_key = createHmacKey(master_key)
-	iv, ciphertext = encryptDocument(encryption_key, plaintext)
-	iv_ciphertext = iv + ciphertext
-	hmac = authenticateEncryption(hmac_key, iv_ciphertext)
-
-	if DEBUG:
-		print("FULL DEBUG")
-		print("Plaintext Type: ", type(plaintext))
-		print("Plaintext: ", plaintext, end='\n\n')
-
-		print("Master Key Type: ", type(master_key))
-		print("Master Key: ", master_key, end='\n\n')
-
-		print("Encryption Key Type: ", type(encryption_key))
-		print("Encryption Key: ", encryption_key, end='\n\n')
-
-		print("HMAC Key Type: ", type(hmac_key))
-		print("HMAC Key: ", hmac_key, end='\n\n')
-
-		print("IV Type: ", type(iv))
-		print("IV: ", iv, end='\n\n')
-
-		print("Ciphertext Type: ", type(ciphertext))
-		print("Ciphertext: ", ciphertext, end='\n\n')
-
-		print("HMAC Type: ", type(hmac))
-		print("HMAC: ", hmac, end='\n\n')
-
-	encryption_scheme['HMAC'] = hmac
-	encryption_scheme['iv'] = binascii.hexlify(iv).decode()
-
-	header = addHeader()
-	finalFile = bytes(header, "UTF-8") + ciphertext
-
-	if DEBUG_FINAL_FILE:
-		print("Header Type: ", type(header))
-		print("Header: ", header)
-		print("Final File: \n", finalFile, end='\n\n')
-
-		# encryption_scheme['ciphertext'] = binascii.hexlify(ciphertext).decode()
-		# encryption_scheme['masterKey'] = binascii.hexlify(master_key).decode()
-		# encryption_scheme['encryptionKey'] = binascii.hexlify(master_key).decode()
-		# encryption_scheme['hmacKey'] = binascii.hexlify(master_key).decode()
-		# encryption_scheme['plainText'] = binascii.hexlify(plaintext).decode()
-		# finalFileJson = json.dumps(encryption_scheme)
-		# for key in encryption_scheme.keys():
-		# 	print(key) TODO mess around if needed to compare
-		# print("JSON: ", finalFileJson)
-
-	saveEncryptedFile(finalFile)
-
-#######################################################################
+###############################################################################
+# Decryption Utility Methods
+###############################################################################
 '''
 initDecryptionScheme()
 	* read decryption configuration settings from file
@@ -382,13 +359,94 @@ def verifyHmac(master_key):
 	except ValueError:
 		print("The message or the key is wrong")
 
+
+
+
+###############################################################################
+# Variables tracking encryption and decryption session settings and preferences
+###############################################################################
+
+'''
+Dictionaries of hash modules and info about encrytion standards
+Can be easily updated for purposes of crypto-agility
+'''
+hash_library = {"SHA256": SHA256, "SHA512": SHA512}
+standard_block_size = {"3DES": 8, "AES128": 16}
+
+decryption_params = ["HMAC", "KDF", "count", "iv", "encryptionType", "hashType", "masterSalt", "encryptionSalt", "hmacSalt"]
+encryption_scheme = {}
+decryption_scheme = {}
+decryption_scheme_bytes = {}
+
+###############################################################################
+# Configure preferences from CLI and config files
+###############################################################################
+getArgs()
+
+###############################################################################
+# Encryption Program Flow
+###############################################################################
+if ENCRYPTION_BRANCH:
+	initEncryptionScheme()
+	plaintext = getPlaintext()
+	master_key = createMasterKey()
+	encryption_key = createEncryptionKey(master_key)
+	hmac_key = createHmacKey(master_key)
+	iv, ciphertext = encryptDocument(encryption_key, plaintext)
+	iv_ciphertext = iv + ciphertext
+	hmac = authenticateEncryption(hmac_key, iv_ciphertext)
+
+	if DEBUG:
+		print("FULL DEBUG")
+		print("Plaintext Type: ", type(plaintext))
+		print("Plaintext: ", plaintext, end='\n\n')
+
+		print("Master Key Type: ", type(master_key))
+		print("Master Key: ", master_key, end='\n\n')
+
+		print("Encryption Key Type: ", type(encryption_key))
+		print("Encryption Key: ", encryption_key, end='\n\n')
+
+		print("HMAC Key Type: ", type(hmac_key))
+		print("HMAC Key: ", hmac_key, end='\n\n')
+
+		print("IV Type: ", type(iv))
+		print("IV: ", iv, end='\n\n')
+
+		print("Ciphertext Type: ", type(ciphertext))
+		print("Ciphertext: ", ciphertext, end='\n\n')
+
+		print("HMAC Type: ", type(hmac))
+		print("HMAC: ", hmac, end='\n\n')
+
+	encryption_scheme['HMAC'] = hmac
+	encryption_scheme['iv'] = binascii.hexlify(iv).decode()
+
+	header = addHeader()
+	finalFile = bytes(header, "UTF-8") + ciphertext
+
+	if DEBUG_FINAL_FILE:
+		print("Header Type: ", type(header))
+		print("Header: ", header)
+		print("Final File: \n", finalFile, end='\n\n')
+
+		# encryption_scheme['ciphertext'] = binascii.hexlify(ciphertext).decode()
+		# encryption_scheme['masterKey'] = binascii.hexlify(master_key).decode()
+		# encryption_scheme['encryptionKey'] = binascii.hexlify(master_key).decode()
+		# encryption_scheme['hmacKey'] = binascii.hexlify(master_key).decode()
+		# encryption_scheme['plainText'] = binascii.hexlify(plaintext).decode()
+		# finalFileJson = json.dumps(encryption_scheme)
+		# for key in encryption_scheme.keys():
+		# 	print(key) TODO mess around if needed to compare
+		# print("JSON: ", finalFileJson)
+
+	saveEncryptedFile(finalFile)
+
+
+###############################################################################
+# Decryption Program Flow 
+###############################################################################
 if DECRYPTION_BRANCH:
-	'''
-	variables tracking encryption session and preferences
-	'''
-	decryption_params = ["HMAC", "KDF", "count", "iv", "encryptionType", "hashType", "masterSalt", "encryptionSalt", "hmacSalt"]
-	decryption_scheme = {}
-	decryption_scheme_bytes = {}
 
 	initDecryptionScheme()
 
