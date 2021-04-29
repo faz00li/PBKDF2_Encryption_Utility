@@ -196,20 +196,17 @@ addHeader(master_key, encryption_key, hmac_key, iv_ciphertext)
 def addHeader():
 	print("addHeader()")
 
-	hpd = "_"
-	cd = "???"
+	head_delim = "_"
+	ciph_delim = "???"
 	
-	finalFile = encryption_scheme['HMAC'] + hpd + encryption_scheme['kdf'] + hpd + str(encryption_scheme['count']) + hpd + encryption_scheme['iv'] \
-		+ hpd + encryption_scheme['encryptionType'] + hpd + encryption_scheme['hashType'] + hpd + encryption_scheme['masterSalt'] + hpd \
-			 + encryption_scheme['encryptionSalt'] + hpd + encryption_scheme['hmacSalt'] + cd + encryption_scheme['ciphertext']
-
-	try1 = encryption_scheme['HMAC'] + hpd + encryption_scheme['kdf'] + hpd + str(encryption_scheme['count']) + hpd + encryption_scheme['iv'] \
-		+ hpd + encryption_scheme['encryptionType'] + hpd + encryption_scheme['hashType'] + hpd + encryption_scheme['masterSalt'] + hpd \
-			 + encryption_scheme['encryptionSalt'] + hpd + encryption_scheme['hmacSalt'] 
+	header = encryption_scheme['HMAC'] + head_delim + encryption_scheme['kdf'] + head_delim + str(encryption_scheme['count']) + head_delim + encryption_scheme['iv'] \
+		+ head_delim + encryption_scheme['encryptionType'] + head_delim + encryption_scheme['hashType'] + head_delim + encryption_scheme['masterSalt'] + head_delim \
+			 + encryption_scheme['encryptionSalt'] + head_delim + encryption_scheme['hmacSalt'] + ciph_delim
 	
-	print("Final Header: ", bytes(try1, "UTF-*") )
+	if DEBUG_INTERNAL:
+		print("Final Header: ", header)
 	
-	return finalFile
+	return header
 
 '''
 getFileName()
@@ -231,10 +228,10 @@ def saveEncryptedFile(finalFile):
 
 	if DEBUG_INTERNAL:
 		print("File Name:", file_name)
-		print("Final File TypeL ", type(finalFile))
+		print("Final File Type: ", type(finalFile))
 
 	with open(file_name, "wb") as f:
-		f.write(bytes(finalFile, "UTF-8"))
+		f.write(finalFile)
 
 '''
 Dictionaries of hash modules and info about encrytion standards
@@ -287,18 +284,21 @@ if DEBUG:
 
 encryption_scheme['HMAC'] = hmac
 encryption_scheme['iv'] = binascii.hexlify(iv).decode()
-encryption_scheme['ciphertext'] = binascii.hexlify(ciphertext).decode()
+# encryption_scheme['ciphertext'] = binascii.hexlify(ciphertext).decode()
 
-finalFile = addHeader()
+header = addHeader()
+finalFile = bytes(header, "UTF-8") + ciphertext
 
 if DEBUG_FINAL_FILE:
+	print("Header Type: ", type(header))
+	print("Header: ", header)
 	print("Final File: \n", finalFile, end='\n\n')
 
-	encryption_scheme['masterKey'] = binascii.hexlify(master_key).decode()
-	encryption_scheme['encryptionKey'] = binascii.hexlify(master_key).decode()
-	encryption_scheme['hmacKey'] = binascii.hexlify(master_key).decode()
-	encryption_scheme['plainText'] = binascii.hexlify(plaintext).decode()
-	finalFileJson = json.dumps(encryption_scheme)
+	# encryption_scheme['masterKey'] = binascii.hexlify(master_key).decode()
+	# encryption_scheme['encryptionKey'] = binascii.hexlify(master_key).decode()
+	# encryption_scheme['hmacKey'] = binascii.hexlify(master_key).decode()
+	# encryption_scheme['plainText'] = binascii.hexlify(plaintext).decode()
+	# finalFileJson = json.dumps(encryption_scheme)
 	# for key in encryption_scheme.keys():
 	# 	print(key) TODO mess around if needed to compare
 	# print("JSON: ", finalFileJson)
