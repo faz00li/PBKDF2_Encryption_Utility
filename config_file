@@ -1,17 +1,7 @@
 {
-	"mode": "none",
-	"password": "password",
-	"filePath": "/home/seed/Documents/PBKDF2_Encryption_Utility/README.md",
-	"filePath1": "/home/seed/Documents/PBKDF2_Encryption_Utility/racoon_pic",
-	"filePath2": "/home/seed/Documents/PBKDF2_Encryption_Utility/ProdComp.xlsx",
-	"kdf": "PBKDF2",
-	"encryptionType": "AES128",
-	"hashType": "SHA256",
+	"KDF": "PBKDF2",
  	"count": 1000,
-	"HMAC": "none",
-	"masterSalt": "none",
-	"encryptionSalt": "none",
-	"hmacSalt": "none",
 	"iv": "none",
-	"ciphertext": "none"
+	"encryptionType": "AES128",
+	"hashType": "SHA256"
  }

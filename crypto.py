@@ -11,12 +11,25 @@ import binascii
 import sys
 import argparse
 
+###############################################################################
+# Salts can be strings or binary
+# Keys must be binary
+# Ciphertext must be binary
+# Plaintext must be binary
+###############################################################################
 DEBUG = True
 DEBUG_INTERNAL = 1
 DEBUG_INTERNAL_CREATE_KEY = 0
 DEBUG_FINAL_FILE = 0
 ENCRYPTION_BRANCH = True
 DECRYPTION_BRANCH = False
+
+# DEBUG_1 = True
+# if DEBUG_1:
+# 	if ENCRYPTION_BRANCH:
+# 		print("Encryption Scheme: ", encryption_scheme, end='\n\n')
+# 	if DECRYPTION_BRANCH:
+# 		print("Decryption Scheme: ", decryption_scheme, end='\n\n')
 
 ###############################################################################
 # Methods for both Encryption and Decryption
@@ -35,115 +48,46 @@ def getArgs():
 
 	args = parser.parse_args()
 
+	global file_path, password, ENCRYPTION_BRANCH, DECRYPTION_BRANCH
+	
 	mode = args.mode
 	file_path = args.path
 	password = args.password
 
-	DEBUG = True
-	if DEBUG:
-		print(f"Mode: {mode} File Path: {file_path} Password: {password}")
-	
-	global encryption_scheme
-	global decryption_scheme
+	DEBUG_0 = False
+	if DEBUG_0:
+		print(f"Mode: {mode}\nFile Path: {file_path}\nPassword: {password}", end="\n\n")
 
 	if mode.upper() == 'ENCRYPT':
 		ENCRYPTION_BRANCH = True
-		encryption_scheme['filePath'] = file_path
-		encryption_scheme['password'] = password
-	
+		print("Beginning Encryption")
+		
 	if mode.upper() == 'DECRYPT':
 		DECRYPTION_BRANCH = True
-		decryption_scheme['filePath'] = file_path
-		decryption_scheme['password'] = password
+		print("Beginning Decryption")
 
 '''
-createMasterKey()
-	* generate a master key w/ PBKDF2 standard
-	* differntiate btw/ encryption/decryption based on config values
-'''
-def createMasterKey():
-	print("createMasterKey()")
-
-	if ENCRYPTION_BRANCH:	
-		print("Encryption Branch:\n")
-		generateSalts()
-		master_key = createKey(encryption_scheme['password'], encryption_scheme['count'], encryption_scheme['masterSalt'])
-
-	if DECRYPTION_BRANCH:
-		print("Decryption Branch:\n")
-		master_key = createKey(decryption_scheme['password'], int(decryption_scheme['count']), decryption_scheme['masterSalt'])
-
-	DEBUG = True
-	if DEBUG:
-		print("Master Key Type: ", type(master_key))
-		print("Master Key: ", master_key, end='\n\n')
-	
-	return master_key
-		
-'''
-createEncryptionKey(master_key, count=1)
-	* derive key w/ single iteration from master key
-	* use for encryption
-''' 
-def createEncryptionKey(master_key, count=1):
-	print("createEncryptionKey()")
-
-	encryption_key = createKey(master_key, count, encryption_scheme['encryptionSalt'])
-	
-	if DEBUG_INTERNAL:
-		print("Encryption Key Type: ", type(encryption_key))
-		print("Encryption Key: ", encryption_key, end='\n\n')
-
-	return encryption_key
-
-'''
-createHmacKey(master_key, count=1)
-	* derive key w/ single PBKDF2 iteration from master key
-	* use for message authentication
-'''
-def createHmacKey(master_key, count=1):
-	print("createHmacKey()")
-	
-	hmac_key = createKey(master_key, count, encryption_scheme['hmacSalt'])
-	
-	if DEBUG_INTERNAL:
-		print("HMAC Key Type: ", type(hmac_key))
-		print("HMAC Key: ", hmac_key, end='\n\n')
-
-	return hmac_key
-
-'''
-createKey(password, count)
+createKey(password, salt, dkLen, count, hmac_hash_module=hash_mod)
 	* generate a single key, dictated by args, that can be used as a:
 		> session master key
 		> document encryption key
 		> message authentication key
 '''
-def createKey(password: str, count: int, salt: b''):
+def createKey(password, salt, dkLen, count, hash_mod):
 	print("createKey()")
 
-	if ENCRYPTION_BRANCH:
-		dkLen = standard_block_size[encryption_scheme['encryptionType']]
-		hash_type = encryption_scheme['hashType']
-		hash_mod = hash_library[encryption_scheme['hashType']]
-
-	if DECRYPTION_BRANCH:
-		dkLen = standard_block_size[decryption_scheme['encryptionType']]
-		hash_type = decryption_scheme['hashType']
-		hash_mod = hash_library[decryption_scheme['hashType']]
-
-	DEBUG_PRE_KEY = True
-	if DEBUG_PRE_KEY:
-		print("Desired Key Length: ", dkLen)
-		print("Encryption Type: ", hash_type )
+	DEBUG_0 = True
+	if DEBUG_0:
 		print("Password: ", password)
-		print("Count: ", count)
 		print('Salt: ', salt, end='\n\n')
+		print("Desired Key Length: ", dkLen)
+		print("Count: ", count)
+		print("Encryption Type: ", hash_mod.__name__)
 
 	key = PBKDF2(password, salt, dkLen, count, hmac_hash_module=hash_mod)
 
-	DEBUG_POST_KEY = True
-	if DEBUG_POST_KEY:
+	DEBUG_1 = True
+	if DEBUG_1:
 		print("Generic Key Type: ", type(key))
 		print("Generic Key: ", key, end='\n\n')
 	
@@ -179,10 +123,11 @@ getPlaintext()
 def getPlaintext():
 	print("getPlaintext()")
 
-	with open(encryption_scheme['filePath'],"rb") as f:
+	with open(file_path,"rb") as f:
 		plaintext = f.read()
 
-	if DEBUG_INTERNAL:
+	DEBUG = False
+	if DEBUG:
 		print("Plaintext: ", plaintext, end='\n\n')
 
 	return plaintext
@@ -193,18 +138,24 @@ generateSalts()
   * encryptionSalt
   * hmacSalt
 '''
-def generateSalts():
+def generateSalts(block_size):
 	print("generateSalts()")
+	
+	global encryption_scheme
 
-	if DEBUG_INTERNAL:
+	# TODO remove
+	# encryption_scheme['masterSalt'] = binascii.hexlify(get_random_bytes(block_size)).decode()
+	# encryption_scheme['encryptionSalt']  = binascii.hexlify(get_random_bytes(block_size)).decode()
+	# encryption_scheme['hmacSalt']  = binascii.hexlify(get_random_bytes(block_size)).decode()
+
+	encryption_scheme['masterSalt'] = get_random_bytes(block_size)
+	encryption_scheme['encryptionSalt']  = get_random_bytes(block_size)
+	encryption_scheme['hmacSalt']  = get_random_bytes(block_size)
+
+	DEBUG = True
+	if DEBUG:
 		print("Encryption Type: ", encryption_scheme['encryptionType'])
-		print("Key Length: ", standard_block_size[encryption_scheme['encryptionType']])
-
-	encryption_scheme['masterSalt'] = binascii.hexlify(get_random_bytes(standard_block_size[encryption_scheme['encryptionType']])).decode()
-	encryption_scheme['encryptionSalt'] = binascii.hexlify(get_random_bytes(standard_block_size[encryption_scheme['encryptionType']])).decode()
-	encryption_scheme['hmacSalt'] = binascii.hexlify(get_random_bytes(standard_block_size[encryption_scheme['encryptionType']])).decode()
-
-	if DEBUG_INTERNAL:
+		print("Desired Key Length: ", standard_block_size[encryption_scheme['encryptionType']])
 		print("Master Salt Type: ", type(encryption_scheme['masterSalt']))
 		print("Master Salt: ", encryption_scheme['masterSalt'])
 		print("Encryption Salt Type: ", type(encryption_scheme['encryptionSalt']))
@@ -326,14 +277,14 @@ def initDecryptionScheme():
 	meta_cipher = encrypted_doc.split(bytes("???", "UTF-8"))
 
 	meta = meta_cipher[0].split(bytes("_", "UTF-8"))
-	decryption_scheme_bytes = dict(zip(decryption_params, meta))
+	decryption_scheme_bytes = dict(zip(header_params, meta))
 	decryption_scheme_bytes['cipherext'] = meta_cipher[1]
 
 	meta_string = []
 	for x in meta:
 		meta_string.append(x.decode())
 	
-	decryption_scheme = dict(zip(decryption_params, meta_string))
+	decryption_scheme = dict(zip(header_params, meta_string))
 	decryption_scheme['password'] = conf_scheme['password']
 
 	DEBUG = False
@@ -373,15 +324,22 @@ Can be easily updated for purposes of crypto-agility
 hash_library = {"SHA256": SHA256, "SHA512": SHA512}
 standard_block_size = {"3DES": 8, "AES128": 16}
 
-decryption_params = ["HMAC", "KDF", "count", "iv", "encryptionType", "hashType", "masterSalt", "encryptionSalt", "hmacSalt"]
+header_params = ["HMAC", "KDF", "count", "iv", "encryptionType", "hashType", "masterSalt", "encryptionSalt", "hmacSalt"]
 encryption_scheme = {}
 decryption_scheme = {}
 decryption_scheme_bytes = {}
+password = ""
+file_path = ""
+
 
 ###############################################################################
 # Configure preferences from CLI and config files
 ###############################################################################
 getArgs()
+
+DEBUG_0 = False
+if DEBUG_0:
+	print(f"From Main()\nFile Path: {file_path}\nPassword: {password}", end="\n\n")
 
 ###############################################################################
 # Encryption Program Flow
@@ -389,7 +347,25 @@ getArgs()
 if ENCRYPTION_BRANCH:
 	initEncryptionScheme()
 	plaintext = getPlaintext()
+
+	block_size = standard_block_size[encryption_scheme['encryptionType']]
+	hash_mod = hash_library[encryption_scheme['hashType']]
+	generateSalts(block_size)
+
+# password, salt, dkLen, count, hmac_hash_module=hash_mod
+	master_key = createKey(password, encryption_scheme['masterSalt'], block_size, int(encryption_scheme['count']), hash_mod)
+
+	print("Master Key: ", master_key)
+
+'''
 	master_key = createMasterKey()
+
+	DEBUG = True
+	if DEBUG:
+		print("Plain Text: ", plaintext, end='\n\n')
+
+
+
 	encryption_key = createEncryptionKey(master_key)
 	hmac_key = createHmacKey(master_key)
 	iv, ciphertext = encryptDocument(encryption_key, plaintext)
@@ -441,8 +417,9 @@ if ENCRYPTION_BRANCH:
 		# print("JSON: ", finalFileJson)
 
 	saveEncryptedFile(finalFile)
+'''
 
-
+'''
 ###############################################################################
 # Decryption Program Flow 
 ###############################################################################
@@ -459,20 +436,15 @@ if DECRYPTION_BRANCH:
 	master_key = createMasterKey()
 	# print("Master Key: ", master_key)
 	verifyHmac(master_key)
+'''	
+
+
+
 	
 
 	
 
-	
-
-	
 
 
 
 
-
-########################################
-# Salts can be strings or binary
-# Keys must be binary
-# Ciphertext must be binary
-# Plaintext must be binary
