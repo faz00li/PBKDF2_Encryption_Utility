@@ -181,7 +181,7 @@ encryptDocument(encryption_key)
 '''
 def encryptDocument(encryption_key, plaintext):
 	print("encryptDocument()")
-# bet
+
 	cipher = AES.new(encryption_key, AES.MODE_CBC)
 	ciphertext = cipher.encrypt(pad(plaintext, AES.block_size))
 	iv = cipher.iv
@@ -203,16 +203,17 @@ authenticateEncryption()
 	* derive HMAC from bytes
 	* store HMAC in dictionary
 '''
-def authenticateEncryption(hmac_key, iv_ciphertext):
+def authenticateEncryption(hmac_key, iv_ciphertext, hash_mod):
 	print("authenticateEncryption()")
-	h = HMAC.new(hmac_key, digestmod=hash_library[encryption_scheme['hashType']])
+	h = HMAC.new(hmac_key, digestmod=hash_mod)
 	h.update(iv_ciphertext)
 	hmac = h.hexdigest()
 
-	if DEBUG_INTERNAL:
+	DEBUG = True
+	if DEBUG:
 		print("HMAC Type:", type(hmac))
 		print("HMAC:", hmac, end='\n\n')
-
+# bet
 	return hmac
 
 '''
@@ -366,8 +367,10 @@ if ENCRYPTION_BRANCH:
 	iv, ciphertext = encryptDocument(encryption_key, plaintext)
 	iv_ciphertext = iv + ciphertext
 
+	hmac = authenticateEncryption(hmac_key, iv_ciphertext, hash_mod)
+
 	# aleph
-	DEBUG_1 = True
+	DEBUG_1 = False
 	if DEBUG_1:
 		print("SUMMARY DEBUG")
 		print("Plaintext Type: ", type(plaintext))
@@ -381,16 +384,7 @@ if ENCRYPTION_BRANCH:
 
 		print("HMAC Key Type: ", type(hmac_key))
 		print("HMAC Key: ", hmac_key, end='\n\n')
-	
 
-'''
-	
-
-	
-	hmac = authenticateEncryption(hmac_key, iv_ciphertext)
-
-	
--------->
 		print("IV Type: ", type(iv))
 		print("IV: ", iv, end='\n\n')
 
@@ -399,6 +393,19 @@ if ENCRYPTION_BRANCH:
 
 		print("HMAC Type: ", type(hmac))
 		print("HMAC: ", hmac, end='\n\n')
+
+	
+
+'''
+	
+
+	
+	
+
+	
+-------->
+		
+	
 
 	encryption_scheme['HMAC'] = hmac
 	encryption_scheme['iv'] = binascii.hexlify(iv).decode()
