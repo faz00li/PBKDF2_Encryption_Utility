@@ -1,7 +1,6 @@
 {
 	"KDF": "PBKDF2",
  	"count": 1000,
-	"iv": "none",
 	"eType": "AES128",
 	"hType": "SHA256"
  }

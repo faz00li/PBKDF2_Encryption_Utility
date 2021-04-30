@@ -16,15 +16,13 @@ import argparse
 # Keys must be binary
 # Ciphertext must be binary
 # Plaintext must be binary
-# hmac digest returned as string - turn back into string after decryption
+# hmac digest returned as bytes
 ###############################################################################
-DEBUG = True
-DEBUG_INTERNAL = 1
-DEBUG_INTERNAL_CREATE_KEY = 0
-DEBUG_FINAL_FILE = 0
+# Regulate operation mode
 ENCRYPTION_BRANCH = True
 DECRYPTION_BRANCH = False
 
+# Types of keys used w/ KDF
 MASTER_KEY = 1
 ENCRYPTION_KEY = 2
 HMAC_KEY = 3
@@ -32,14 +30,6 @@ HMAC_KEY = 3
 # Header filed and ciphertext delimiters in encrypted file
 HD = bytes("_", "UTF-8")
 CD = bytes("???", "UTF-8")
-
-
-# DEBUG_1 = True
-# if DEBUG_1:
-# 	if ENCRYPTION_BRANCH:
-# 		print("Encryption Scheme: ", encryption_scheme, end='\n\n')
-# 	if DECRYPTION_BRANCH:
-# 		print("Decryption Scheme: ", decryption_scheme, end='\n\n')
 
 ###############################################################################
 # Methods for both Encryption and Decryption
@@ -123,16 +113,16 @@ initEncryptionScheme()
 def initEncryptionScheme():
 	print("initEncryptionScheme()")
 
-	global encryption_scheme
+	global e_scheme
 
 	with open('config_file') as config_file:
-		encryption_scheme = json.load(config_file)
+		e_scheme = json.load(config_file)
 
 	config_file.close()
 
 	DEBUG = True
 	if DEBUG:
-		print("Initial Encryption Scheme: ", encryption_scheme, end='\n\n')
+		print("Initial Encryption Scheme: ", e_scheme, end='\n\n')
 		
 '''
 getPlaintext()
@@ -160,22 +150,22 @@ generateSalts()
 '''
 def generateSalts(block_size):
 	print("generateSalts(block_size)")
-	
-	global encryption_scheme
 
-	encryption_scheme['mSalt'] = get_random_bytes(block_size)
-	encryption_scheme['eSalt']  = get_random_bytes(block_size)
-	encryption_scheme['hSalt']  = get_random_bytes(block_size)
+	global e_scheme
+
+	e_scheme['mSalt'] = get_random_bytes(block_size)
+	e_scheme['eSalt']  = get_random_bytes(block_size)
+	e_scheme['hSalt']  = get_random_bytes(block_size)
 
 	DEBUG = True
 	if DEBUG:
 		print("Desired Salt Length: ", block_size)
-		print("Master Salt Type: ", type(encryption_scheme['mSalt']))
-		print("Master Salt: ", encryption_scheme['mSalt'])
-		print("Encryption Salt Type: ", type(encryption_scheme['eSalt']))
-		print("Encryption Salt: ", encryption_scheme['eSalt'])
-		print("HMAC Salt Type: ", type(encryption_scheme['hSalt']))
-		print("HMAC Salt: ", encryption_scheme['hSalt'], end='\n\n')
+		print("Master Salt Type: ", type(e_scheme['mSalt']))
+		print("Master Salt: ", e_scheme['mSalt'])
+		print("Encryption Salt Type: ", type(e_scheme['eSalt']))
+		print("Encryption Salt: ", e_scheme['eSalt'])
+		print("HMAC Salt Type: ", type(e_scheme['hSalt']))
+		print("HMAC Salt: ", e_scheme['hSalt'], end='\n\n')
 		
 '''
 encryptDocument(encryption_key)
@@ -226,38 +216,42 @@ formatHeaderFields():
 	* Convert all header fileds to bytes and store in dictionary
 '''
 def formatHeaderFields(hmac: bytes, s_kdf: str, i_count: int, iv: bytes, s_eType: str, s_hType: str, mSalt: bytes, eSalt: bytes, hSalt: bytes):
-	print("formatHeaderFields() -> addHeader()\n")
+	print("formatHeaderFields()\n")
 
-	
-	global header_fields
+	global h_fields
 
 	kdf = bytes(s_kdf, "UTF-8")
 	count = bytes(str(i_count), "UTF-8")
 	eType = bytes(s_eType, "UTF-8")
 	hType = bytes(s_hType, "UTF-8")
 
-	header_fields['HMAC'] = hmac
-	header_fields['KDF'] = kdf
-	header_fields['count'] = count
-	header_fields['iv'] = iv
-	header_fields['eType'] = eType
-	header_fields['hType'] = hType
-	header_fields['mSalt'] = mSalt
-	header_fields['eSalt'] = eSalt
-	header_fields['hSalt'] = hSalt
+	h_fields['HMAC'] = hmac
+	h_fields['KDF'] = kdf
+	h_fields['count'] = count
+	h_fields['iv'] = iv
+	h_fields['eType'] = eType
+	h_fields['hType'] = hType
+	h_fields['mSalt'] = mSalt
+	h_fields['eSalt'] = eSalt
+	h_fields['hSalt'] = hSalt
+
+	DEBUG = True
+	if DEBUG:
+		for key in h_fields.keys():
+			print(key, " ", h_fields[key])
+		print("\n")
 
 '''
-addHeader(master_key, encryption_key, hmac_key, iv_ciphertext)
+getHeader(master_key, encryption_key, hmac_key, iv_ciphertext)
 	* add header to ciphertext
 	* return header and ciphertext as string 
 '''
-def addHeader(hmac: bytes, s_kdf: str, i_count: int, iv: bytes, s_eType: str, s_hType: str, mSalt: bytes, eSalt: bytes, hSalt: bytes):
-	print("addHeader()")
+def getHeader(hmac: bytes, s_kdf: str, i_count: int, iv: bytes, s_eType: str, s_hType: str, mSalt: bytes, eSalt: bytes, hSalt: bytes):
+	print("getHeader()")
 
-	formatHeaderFields(hmac, s_kdf, i_count, iv, s_eType, s_hType, mSalt, eSalt, hSalt)
-	header = header_fields['HMAC'] + HD + header_fields['KDF'] + HD + header_fields['count'] + HD + header_fields['iv'] + HD + \
-				header_fields['eType'] + HD + header_fields['hType'] + HD + header_fields['mSalt'] + HD + header_fields['eSalt'] + HD + \
-						header_fields['hSalt'] + CD
+	header = h_fields['HMAC'] + HD + h_fields['KDF'] + HD + h_fields['count'] + HD + h_fields['iv'] + HD + \
+				h_fields['eType'] + HD + h_fields['hType'] + HD + h_fields['mSalt'] + HD + h_fields['eSalt'] + HD + \
+						h_fields['hSalt'] + CD
 	
 	DEBUG = True
 	if DEBUG:
@@ -360,7 +354,6 @@ def verifyHmac(master_key):
 ###############################################################################
 # Variables tracking encryption and decryption session settings and preferences
 ###############################################################################
-
 '''
 Dictionaries of hash modules and info about encrytion standards
 Can be easily updated for purposes of crypto-agility
@@ -368,9 +361,9 @@ Can be easily updated for purposes of crypto-agility
 hash_library = {"SHA256": SHA256, "SHA512": SHA512}
 standard_block_size = {"3DES": 8, "AES128": 16}
 
-header_fields = {}
+h_fields = {}
 header_params = ["HMAC", "KDF", "count", "iv", "eType", "hType", "mSalt", "eSalt", "hSalt"]
-encryption_scheme = {}
+e_scheme = {}
 decryption_scheme = {}
 decryption_scheme_bytes = {}
 password = ""
@@ -390,78 +383,69 @@ if DEBUG_0:
 # Encryption Program Flow
 ###############################################################################
 if ENCRYPTION_BRANCH:
+	# Get encryption configuration settings and preferences
 	initEncryptionScheme()
+	
+	# Get cipher block size and actual Python hash module
+	e_scheme['bSize'] = standard_block_size[e_scheme['eType']]
+	hash_mod = hash_library[e_scheme['hType']]
 
-	block_size = standard_block_size[encryption_scheme['eType']]
-	hash_mod = hash_library[encryption_scheme['hType']]
+	# Extract plaintext
+	e_scheme['pText'] = getPlaintext()
 
-	plaintext = getPlaintext()
-	generateSalts(block_size)
+	# Generate Salts - written globally into scheme dictionary
+	generateSalts(e_scheme['bSize'])
 
-	master_key = createKey(password, encryption_scheme['mSalt'], block_size, encryption_scheme['count'], hash_mod, MASTER_KEY)
-	encryption_key = createKey(password, encryption_scheme['eSalt'], block_size, 1, hash_mod, ENCRYPTION_KEY)
-	hmac_key = createKey(password, encryption_scheme['hSalt'], block_size, 1, hash_mod, HMAC_KEY)
+	# Create keys
+	e_scheme['mKey'] = createKey(password, e_scheme['mSalt'], e_scheme['bSize'], e_scheme['count'], hash_mod, MASTER_KEY)
+	e_scheme['eKey'] = createKey(e_scheme['mKey'], e_scheme['eSalt'], e_scheme['bSize'], 1, hash_mod, ENCRYPTION_KEY)
+	e_scheme['hKey'] = createKey(e_scheme['mKey'], e_scheme['hSalt'], e_scheme['bSize'], 1, hash_mod, HMAC_KEY)
 
-	iv, ciphertext = encryptDocument(encryption_key, plaintext)
-	iv_ciphertext = iv + ciphertext
+	# Encrypt file - obtain iv and ciphertext
+	e_scheme['iv'], e_scheme['cText'] = encryptDocument(e_scheme['eKey'], e_scheme['pText'])
 
-	hmac = authenticateEncryption(hmac_key, iv_ciphertext, hash_mod)
+	# Authenticate hmac(iv + ciphertext)
+	e_scheme['iv_cText'] = e_scheme['iv'] + e_scheme['cText']
+	e_scheme['HMAC'] = authenticateEncryption(e_scheme['hKey'], e_scheme['iv_cText'], hash_mod)
 
-	encryption_scheme['HMAC'] = hmac
-	encryption_scheme['iv'] = binascii.hexlify(iv).decode()
-# aleph
-	header = addHeader(hmac, encryption_scheme['KDF'], encryption_scheme['count'], iv, encryption_scheme['eType'], encryption_scheme['hType'], \
-		encryption_scheme['mSalt'], encryption_scheme['eSalt'], encryption_scheme['hSalt'])
+	# Format header fields - written globally into header dictionary
+	formatHeaderFields(e_scheme['HMAC'], e_scheme['KDF'], e_scheme['count'], e_scheme['iv'], e_scheme['eType'], e_scheme['hType'], \
+		e_scheme['mSalt'], e_scheme['eSalt'], e_scheme['hSalt'])
 
-	final_file = header + ciphertext
+	# Generate header
+	e_scheme['header'] = getHeader(h_fields['HMAC'], h_fields['KDF'], h_fields['count'], h_fields['iv'], h_fields['eType'], h_fields['hType'], \
+		h_fields['mSalt'], h_fields['eSalt'], h_fields['hSalt'])
 
+	# Combine header and ciphertext into one file and save
+	final_file = e_scheme['header'] + e_scheme['cText']
 	saveEncryptedFile(final_file)
 
+	# Additional debugging - log1: header log2: keys, strictly for debugging in production
+	DEBUG_DIAGNOSTIC = True
+	if DEBUG_DIAGNOSTIC:
+		original_stdout = sys.stdout 
 
+		with open('header_fields_diagnostics.log', 'w') as f:
+			sys.stdout = f 
+			
+			for key in h_fields.keys():
+				print(h_fields[key])
+			
+			sys.stdout = original_stdout 
 
-	DEBUG_1 = False
-	if DEBUG_1:
-		print("SUMMARY DEBUG")
-		print("Plaintext Type: ", type(plaintext))
-		print("Plaintext:\n", plaintext, end='\n\n')
+			f.close()
 
-		print("Master Key Type: ", type(master_key))
-		print("Master Key: ", master_key, end='\n\n')
-
-		print("Encryption Key Type: ", type(encryption_key))
-		print("Encryption Key: ", encryption_key, end='\n\n')
-
-		print("HMAC Key Type: ", type(hmac_key))
-		print("HMAC Key: ", hmac_key, end='\n\n')
-
-		print("IV Type: ", type(iv))
-		print("IV: ", iv, end='\n\n')
-
-		print("Ciphertext Type: ", type(ciphertext))
-		print("Ciphertext: ", ciphertext, end='\n\n')
-
-		print("HMAC Type: ", type(hmac))
-		print("HMAC: ", hmac, end='\n\n')
-
-		print("Final File Type: ", final_file)
-
-		# DEBUG_DIAGNOSTIC = True
-		# if DEBUG_DIAGNOSTIC:
-		# 	original_stdout = sys.stdout 
-
-		# 	with open('header_fields.log', 'w') as f:
-		# 		sys.stdout = f 
-				
-		# 		for key in header_fields.keys():
-		# 			print(key + ": ", header_fields[key])
-				
-		# 		sys.stdout = original_stdout 
-
-		# 		f.close()
-
+		with open('key_diagnostics.log', 'w') as f:
+			sys.stdout = f 
 	
+			print(e_scheme['HMAC'])
+			print(e_scheme['mKey'])
+			print(e_scheme['eKey'])
+			print(e_scheme['hKey'])
+			
+			sys.stdout = original_stdout 
 
-
+			f.close()
 
 '''
 ###############################################################################
