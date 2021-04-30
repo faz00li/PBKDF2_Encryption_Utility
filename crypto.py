@@ -24,6 +24,11 @@ DEBUG_FINAL_FILE = 0
 ENCRYPTION_BRANCH = True
 DECRYPTION_BRANCH = False
 
+MASTER_KEY = 1
+ENCRYPTION_KEY = 2
+HMAC_KEY = 3
+
+
 # DEBUG_1 = True
 # if DEBUG_1:
 # 	if ENCRYPTION_BRANCH:
@@ -39,6 +44,7 @@ getArgs()
 	* collect preferences from CLI
 '''
 def getArgs():
+	print("getArgs()")
 	parser = argparse.ArgumentParser(prog="PBKDF2 Encryption Utility", \
 	usage="Program for encrypting and decrypting files. CLI input takes mode of operation, path to file, and the password.")
 
@@ -54,17 +60,17 @@ def getArgs():
 	file_path = args.path
 	password = args.password
 
-	DEBUG_0 = False
+	DEBUG_0 = True
 	if DEBUG_0:
 		print(f"Mode: {mode}\nFile Path: {file_path}\nPassword: {password}", end="\n\n")
 
 	if mode.upper() == 'ENCRYPT':
 		ENCRYPTION_BRANCH = True
-		print("Beginning Encryption")
+		print("Beginning Encryption", end='\n\n')
 		
 	if mode.upper() == 'DECRYPT':
 		DECRYPTION_BRANCH = True
-		print("Beginning Decryption")
+		print("Beginning Decryption", end='\n\n')
 
 '''
 createKey(password, salt, dkLen, count, hmac_hash_module=hash_mod)
@@ -73,23 +79,30 @@ createKey(password, salt, dkLen, count, hmac_hash_module=hash_mod)
 		> document encryption key
 		> message authentication key
 '''
-def createKey(password, salt, dkLen, count, hash_mod):
+def createKey(password, salt, dkLen, count, hash_mod, key_type):
 	print("createKey()")
 
 	DEBUG_0 = True
 	if DEBUG_0:
 		print("Password: ", password)
-		print('Salt: ', salt, end='\n\n')
+		print('Salt: ', salt)
 		print("Desired Key Length: ", dkLen)
 		print("Count: ", count)
-		print("Encryption Type: ", hash_mod.__name__)
+		print("Encryption Type: ", hash_mod.__name__, end='\n\n')
 
 	key = PBKDF2(password, salt, dkLen, count, hmac_hash_module=hash_mod)
 
 	DEBUG_1 = True
 	if DEBUG_1:
-		print("Generic Key Type: ", type(key))
-		print("Generic Key: ", key, end='\n\n')
+		if key_type == MASTER_KEY:
+			print("Master Key Type: ", type(key))
+			print("Master Key: ", key, end='\n\n')
+		if key_type == ENCRYPTION_KEY:
+			print("Encryption Key Type: ", type(key))
+			print("Encryption Key: ", key, end='\n\n')
+		if key_type == HMAC_KEY:
+			print("HMAC Key Type: ", type(key))
+			print("HMAC Key: ", key, end='\n\n')
 	
 	return key
 
@@ -112,9 +125,9 @@ def initEncryptionScheme():
 
 	config_file.close()
 
-	DEBUG = False
+	DEBUG = True
 	if DEBUG:
-		print("Encryption Scheme: ", encryption_scheme, end='\n\n')
+		print("Initial Encryption Scheme: ", encryption_scheme, end='\n\n')
 		
 '''
 getPlaintext()
@@ -125,8 +138,10 @@ def getPlaintext():
 
 	with open(file_path,"rb") as f:
 		plaintext = f.read()
+	
+	f.close()
 
-	DEBUG = False
+	DEBUG = True
 	if DEBUG:
 		print("Plaintext: ", plaintext, end='\n\n')
 
@@ -139,14 +154,9 @@ generateSalts()
   * hmacSalt
 '''
 def generateSalts(block_size):
-	print("generateSalts()")
+	print("generateSalts(block_size)")
 	
 	global encryption_scheme
-
-	# TODO remove
-	# encryption_scheme['masterSalt'] = binascii.hexlify(get_random_bytes(block_size)).decode()
-	# encryption_scheme['encryptionSalt']  = binascii.hexlify(get_random_bytes(block_size)).decode()
-	# encryption_scheme['hmacSalt']  = binascii.hexlify(get_random_bytes(block_size)).decode()
 
 	encryption_scheme['masterSalt'] = get_random_bytes(block_size)
 	encryption_scheme['encryptionSalt']  = get_random_bytes(block_size)
@@ -154,8 +164,7 @@ def generateSalts(block_size):
 
 	DEBUG = True
 	if DEBUG:
-		print("Encryption Type: ", encryption_scheme['encryptionType'])
-		print("Desired Key Length: ", standard_block_size[encryption_scheme['encryptionType']])
+		print("Desired Salt Length: ", block_size)
 		print("Master Salt Type: ", type(encryption_scheme['masterSalt']))
 		print("Master Salt: ", encryption_scheme['masterSalt'])
 		print("Encryption Salt Type: ", type(encryption_scheme['encryptionSalt']))
@@ -172,13 +181,13 @@ encryptDocument(encryption_key)
 '''
 def encryptDocument(encryption_key, plaintext):
 	print("encryptDocument()")
-
+# bet
 	cipher = AES.new(encryption_key, AES.MODE_CBC)
 	ciphertext = cipher.encrypt(pad(plaintext, AES.block_size))
 	iv = cipher.iv
 
-	if DEBUG_INTERNAL:
-
+	DEBUG = True
+	if DEBUG:
 		print("IV Type: ", type(iv))
 		print("IV: ", iv, end='\n\n')
 
@@ -310,9 +319,6 @@ def verifyHmac(master_key):
 	except ValueError:
 		print("The message or the key is wrong")
 
-
-
-
 ###############################################################################
 # Variables tracking encryption and decryption session settings and preferences
 ###############################################################################
@@ -346,34 +352,24 @@ if DEBUG_0:
 ###############################################################################
 if ENCRYPTION_BRANCH:
 	initEncryptionScheme()
-	plaintext = getPlaintext()
 
 	block_size = standard_block_size[encryption_scheme['encryptionType']]
 	hash_mod = hash_library[encryption_scheme['hashType']]
+
+	plaintext = getPlaintext()
 	generateSalts(block_size)
 
-# password, salt, dkLen, count, hmac_hash_module=hash_mod
-	master_key = createKey(password, encryption_scheme['masterSalt'], block_size, int(encryption_scheme['count']), hash_mod)
+	master_key = createKey(password, encryption_scheme['masterSalt'], block_size, int(encryption_scheme['count']), hash_mod, MASTER_KEY)
+	encryption_key = createKey(password, encryption_scheme['encryptionSalt'], block_size, 1, hash_mod, ENCRYPTION_KEY)
+	hmac_key = createKey(password, encryption_scheme['hmacSalt'], block_size, 1, hash_mod, HMAC_KEY)
 
-	print("Master Key: ", master_key)
-
-'''
-	master_key = createMasterKey()
-
-	DEBUG = True
-	if DEBUG:
-		print("Plain Text: ", plaintext, end='\n\n')
-
-
-
-	encryption_key = createEncryptionKey(master_key)
-	hmac_key = createHmacKey(master_key)
 	iv, ciphertext = encryptDocument(encryption_key, plaintext)
 	iv_ciphertext = iv + ciphertext
-	hmac = authenticateEncryption(hmac_key, iv_ciphertext)
 
-	if DEBUG:
-		print("FULL DEBUG")
+	# aleph
+	DEBUG_1 = True
+	if DEBUG_1:
+		print("SUMMARY DEBUG")
 		print("Plaintext Type: ", type(plaintext))
 		print("Plaintext: ", plaintext, end='\n\n')
 
@@ -385,7 +381,16 @@ if ENCRYPTION_BRANCH:
 
 		print("HMAC Key Type: ", type(hmac_key))
 		print("HMAC Key: ", hmac_key, end='\n\n')
+	
 
+'''
+	
+
+	
+	hmac = authenticateEncryption(hmac_key, iv_ciphertext)
+
+	
+-------->
 		print("IV Type: ", type(iv))
 		print("IV: ", iv, end='\n\n')
 
