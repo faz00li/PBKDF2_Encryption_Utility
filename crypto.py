@@ -16,6 +16,7 @@ import argparse
 # Keys must be binary
 # Ciphertext must be binary
 # Plaintext must be binary
+# hmac digest returned as string - turn back into string after decryption
 ###############################################################################
 DEBUG = True
 DEBUG_INTERNAL = 1
@@ -143,7 +144,7 @@ def getPlaintext():
 
 	DEBUG = True
 	if DEBUG:
-		print("Plaintext: ", plaintext, end='\n\n')
+		print("Plaintext:\n", plaintext, end='\n\n')
 
 	return plaintext
 	
@@ -192,7 +193,7 @@ def encryptDocument(encryption_key, plaintext):
 		print("IV: ", iv, end='\n\n')
 
 		print("Ciphertext Type: ", type(ciphertext))
-		print("Ciphertext: ", ciphertext, end='\n\n')
+		print("Ciphertext:\n", ciphertext, end='\n\n')
 
 	return iv, ciphertext
 	# TODO 3DES
@@ -207,13 +208,13 @@ def authenticateEncryption(hmac_key, iv_ciphertext, hash_mod):
 	print("authenticateEncryption()")
 	h = HMAC.new(hmac_key, digestmod=hash_mod)
 	h.update(iv_ciphertext)
-	hmac = h.hexdigest()
+	hmac = h.digest()
 
 	DEBUG = True
 	if DEBUG:
 		print("HMAC Type:", type(hmac))
 		print("HMAC:", hmac, end='\n\n')
-# bet
+
 	return hmac
 
 '''
@@ -221,18 +222,26 @@ addHeader(master_key, encryption_key, hmac_key, iv_ciphertext)
 	* add header to ciphertext
 	* return header and ciphertext as string 
 '''
-def addHeader():
+def addHeader(hmac: bytes, s_kdf: str, i_count: int, iv: bytes, s_encryptionType: str, s_hashType: str, masterSalt: bytes, encryptionSalt: bytes, hmacSalt: bytes):
 	print("addHeader()")
 
-	head_delim = "_"
-	ciph_delim = "???"
+	head_delim = bytes("_", "UTF-8")
+	ciph_delim = bytes("???", "UTF-8")
+	kdf = bytes(s_kdf, "UTF-8")
+	count = bytes(str(i_count), "UTF-8")
+	encryptionType = bytes(s_encryptionType, "UTF-8")
+	hashType = bytes(s_hashType, "UTF-8")
+
+	header = hmac + head_delim + kdf + head_delim + count + head_delim + iv + head_delim + encryptionType + head_delim + \
+		hashType + head_delim + masterSalt + head_delim + encryptionSalt + head_delim + hmacSalt + ciph_delim
 	
-	header = encryption_scheme['HMAC'] + head_delim + encryption_scheme['kdf'] + head_delim + str(encryption_scheme['count']) + head_delim + encryption_scheme['iv'] \
-		+ head_delim + encryption_scheme['encryptionType'] + head_delim + encryption_scheme['hashType'] + head_delim + encryption_scheme['masterSalt'] + head_delim \
-			 + encryption_scheme['encryptionSalt'] + head_delim + encryption_scheme['hmacSalt'] + ciph_delim
+	DEBUG = True
+	if DEBUG:
+		print("Header:\n", header, end="\n\n")
 	
-	if DEBUG_INTERNAL:
-		print("Final Header: ", header)
+	# bet
+	DEBUG_DIAGNOSTIC = True
+	
 	
 	return header
 
@@ -242,24 +251,32 @@ getFileName()
 '''
 def getFileName():
 	print("getFileName()")
-	filePathTokens = encryption_scheme['filePath'].split("/")
-	fileName = filePathTokens[len(filePathTokens) -1]
-	fileName = fileName + ".enc" 
+	file_path_tokens = file_path.split("/")
+	file_name = file_path_tokens[len(file_path_tokens) -1]
+	file_name = file_name + ".enc" 
 	
-	return fileName
+	DEBUG = True
+	if DEBUG:
+		print("File Name:", file_name)
+	
+	return file_name
 		
 '''
 saveEncryptedFile()
 '''
-def saveEncryptedFile(finalFile):
+def saveEncryptedFile(final_file):
+	print("saveEncryptedFile()")
 	file_name = getFileName()
 
-	if DEBUG_INTERNAL:
+	DEBUG = True
+	if DEBUG:
 		print("File Name:", file_name)
-		print("Final File Type: ", type(finalFile))
+		print("Final File Type: ", type(final_file), end='\n\n')
+		print("Final File:\n", final_file, end='\n\n')
 
 	with open(file_name, "wb") as f:
-		f.write(finalFile)
+		f.write(final_file)
+	f.close()
 
 ###############################################################################
 # Decryption Utility Methods
@@ -315,7 +332,7 @@ def verifyHmac(master_key):
 	h = HMAC.new(master_key, digestmod=hash_library[decryption_scheme['hashType']])
 	h.update(decryption_scheme_bytes['iv'] + decryption_scheme_bytes['ciphertext'])
 	try:
-		h.hexverify(decryption_scheme['HMAC'])
+		h.hexverify(decryption_scheme['HMAC']) #TODO fix hexvrify to verify
 		print("The message '%s' is authentic" % msg)
 	except ValueError:
 		print("The message or the key is wrong")
@@ -360,7 +377,7 @@ if ENCRYPTION_BRANCH:
 	plaintext = getPlaintext()
 	generateSalts(block_size)
 
-	master_key = createKey(password, encryption_scheme['masterSalt'], block_size, int(encryption_scheme['count']), hash_mod, MASTER_KEY)
+	master_key = createKey(password, encryption_scheme['masterSalt'], block_size, encryption_scheme['count'], hash_mod, MASTER_KEY)
 	encryption_key = createKey(password, encryption_scheme['encryptionSalt'], block_size, 1, hash_mod, ENCRYPTION_KEY)
 	hmac_key = createKey(password, encryption_scheme['hmacSalt'], block_size, 1, hash_mod, HMAC_KEY)
 
@@ -369,12 +386,23 @@ if ENCRYPTION_BRANCH:
 
 	hmac = authenticateEncryption(hmac_key, iv_ciphertext, hash_mod)
 
-	# aleph
+	encryption_scheme['HMAC'] = hmac
+	encryption_scheme['iv'] = binascii.hexlify(iv).decode()
+# aleph
+	header = addHeader(hmac, encryption_scheme['KDF'], encryption_scheme['count'], iv, encryption_scheme['encryptionType'], encryption_scheme['hashType'], \
+		encryption_scheme['masterSalt'], encryption_scheme['encryptionSalt'], encryption_scheme['hmacSalt'])
+
+	final_file = header + ciphertext
+
+	saveEncryptedFile(final_file)
+
+
+
 	DEBUG_1 = False
 	if DEBUG_1:
 		print("SUMMARY DEBUG")
 		print("Plaintext Type: ", type(plaintext))
-		print("Plaintext: ", plaintext, end='\n\n')
+		print("Plaintext:\n", plaintext, end='\n\n')
 
 		print("Master Key Type: ", type(master_key))
 		print("Master Key: ", master_key, end='\n\n')
@@ -394,42 +422,11 @@ if ENCRYPTION_BRANCH:
 		print("HMAC Type: ", type(hmac))
 		print("HMAC: ", hmac, end='\n\n')
 
-	
-
-'''
-	
+		print("Final File Type: ", final_file)
 
 	
-	
 
-	
--------->
-		
-	
 
-	encryption_scheme['HMAC'] = hmac
-	encryption_scheme['iv'] = binascii.hexlify(iv).decode()
-
-	header = addHeader()
-	finalFile = bytes(header, "UTF-8") + ciphertext
-
-	if DEBUG_FINAL_FILE:
-		print("Header Type: ", type(header))
-		print("Header: ", header)
-		print("Final File: \n", finalFile, end='\n\n')
-
-		# encryption_scheme['ciphertext'] = binascii.hexlify(ciphertext).decode()
-		# encryption_scheme['masterKey'] = binascii.hexlify(master_key).decode()
-		# encryption_scheme['encryptionKey'] = binascii.hexlify(master_key).decode()
-		# encryption_scheme['hmacKey'] = binascii.hexlify(master_key).decode()
-		# encryption_scheme['plainText'] = binascii.hexlify(plaintext).decode()
-		# finalFileJson = json.dumps(encryption_scheme)
-		# for key in encryption_scheme.keys():
-		# 	print(key) TODO mess around if needed to compare
-		# print("JSON: ", finalFileJson)
-
-	saveEncryptedFile(finalFile)
-'''
 
 '''
 ###############################################################################
