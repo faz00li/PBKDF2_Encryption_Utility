@@ -241,7 +241,39 @@ def addHeader(hmac: bytes, s_kdf: str, i_count: int, iv: bytes, s_encryptionType
 	
 	# bet
 	DEBUG_DIAGNOSTIC = True
-	
+	if DEBUG_DIAGNOSTIC:
+
+		global header_fields_diagnostic
+
+		header_fields_diagnostic['HMAC'] = hmac
+		header_fields_diagnostic['KDF'] = kdf
+		header_fields_diagnostic['count'] = count
+		header_fields_diagnostic['iv'] = iv
+		header_fields_diagnostic['encryptionType'] = encryptionType
+		header_fields_diagnostic['hashType'] = hashType
+		header_fields_diagnostic['masterSalt'] = masterSalt
+		header_fields_diagnostic['encryptionSalt'] = encryptionSalt
+		header_fields_diagnostic['hmacSalt'] = hmacSalt
+
+		original_stdout = sys.stdout 
+
+		with open('header_fields_diagnostic.log', 'w') as f:
+			sys.stdout = f 
+			
+		for key in header_fields_diagnostic.keys():
+			print(key + ":\n\t\t\t\t\t\t", header_fields_diagnostic[key])
+
+		f.close()
+
+		with open('header_fields_diagnostic.log', 'w') as f2:
+		sys.stdout = f2 
+			
+		for value in header_fields_diagnostic.values():
+			print(header_fields_diagnostic[key])
+
+		f.close()
+
+		sys.stdout = original_stdout 
 	
 	return header
 
@@ -348,6 +380,7 @@ Can be easily updated for purposes of crypto-agility
 hash_library = {"SHA256": SHA256, "SHA512": SHA512}
 standard_block_size = {"3DES": 8, "AES128": 16}
 
+header_fields_diagnostic = {}
 header_params = ["HMAC", "KDF", "count", "iv", "encryptionType", "hashType", "masterSalt", "encryptionSalt", "hmacSalt"]
 encryption_scheme = {}
 decryption_scheme = {}
