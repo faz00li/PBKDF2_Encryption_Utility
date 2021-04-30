@@ -2,6 +2,6 @@
 	"KDF": "PBKDF2",
  	"count": 1000,
 	"iv": "none",
-	"encryptionType": "AES128",
-	"hashType": "SHA256"
+	"eType": "AES128",
+	"hType": "SHA256"
  }

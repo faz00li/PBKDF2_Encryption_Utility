@@ -29,6 +29,10 @@ MASTER_KEY = 1
 ENCRYPTION_KEY = 2
 HMAC_KEY = 3
 
+# Header filed and ciphertext delimiters in encrypted file
+HD = bytes("_", "UTF-8")
+CD = bytes("???", "UTF-8")
+
 
 # DEBUG_1 = True
 # if DEBUG_1:
@@ -150,28 +154,28 @@ def getPlaintext():
 	
 '''
 generateSalts()
-  * masterSalt
-  * encryptionSalt
-  * hmacSalt
+  * mSalt
+  * eSalt
+  * hSalt
 '''
 def generateSalts(block_size):
 	print("generateSalts(block_size)")
 	
 	global encryption_scheme
 
-	encryption_scheme['masterSalt'] = get_random_bytes(block_size)
-	encryption_scheme['encryptionSalt']  = get_random_bytes(block_size)
-	encryption_scheme['hmacSalt']  = get_random_bytes(block_size)
+	encryption_scheme['mSalt'] = get_random_bytes(block_size)
+	encryption_scheme['eSalt']  = get_random_bytes(block_size)
+	encryption_scheme['hSalt']  = get_random_bytes(block_size)
 
 	DEBUG = True
 	if DEBUG:
 		print("Desired Salt Length: ", block_size)
-		print("Master Salt Type: ", type(encryption_scheme['masterSalt']))
-		print("Master Salt: ", encryption_scheme['masterSalt'])
-		print("Encryption Salt Type: ", type(encryption_scheme['encryptionSalt']))
-		print("Encryption Salt: ", encryption_scheme['encryptionSalt'])
-		print("HMAC Salt Type: ", type(encryption_scheme['hmacSalt']))
-		print("HMAC Salt: ", encryption_scheme['hmacSalt'], end='\n\n')
+		print("Master Salt Type: ", type(encryption_scheme['mSalt']))
+		print("Master Salt: ", encryption_scheme['mSalt'])
+		print("Encryption Salt Type: ", type(encryption_scheme['eSalt']))
+		print("Encryption Salt: ", encryption_scheme['eSalt'])
+		print("HMAC Salt Type: ", type(encryption_scheme['hSalt']))
+		print("HMAC Salt: ", encryption_scheme['hSalt'], end='\n\n')
 		
 '''
 encryptDocument(encryption_key)
@@ -218,62 +222,46 @@ def authenticateEncryption(hmac_key, iv_ciphertext, hash_mod):
 	return hmac
 
 '''
+formatHeaderFields():
+	* Convert all header fileds to bytes and store in dictionary
+'''
+def formatHeaderFields(hmac: bytes, s_kdf: str, i_count: int, iv: bytes, s_eType: str, s_hType: str, mSalt: bytes, eSalt: bytes, hSalt: bytes):
+	print("formatHeaderFields() -> addHeader()\n")
+
+	
+	global header_fields
+
+	kdf = bytes(s_kdf, "UTF-8")
+	count = bytes(str(i_count), "UTF-8")
+	eType = bytes(s_eType, "UTF-8")
+	hType = bytes(s_hType, "UTF-8")
+
+	header_fields['HMAC'] = hmac
+	header_fields['KDF'] = kdf
+	header_fields['count'] = count
+	header_fields['iv'] = iv
+	header_fields['eType'] = eType
+	header_fields['hType'] = hType
+	header_fields['mSalt'] = mSalt
+	header_fields['eSalt'] = eSalt
+	header_fields['hSalt'] = hSalt
+
+'''
 addHeader(master_key, encryption_key, hmac_key, iv_ciphertext)
 	* add header to ciphertext
 	* return header and ciphertext as string 
 '''
-def addHeader(hmac: bytes, s_kdf: str, i_count: int, iv: bytes, s_encryptionType: str, s_hashType: str, masterSalt: bytes, encryptionSalt: bytes, hmacSalt: bytes):
+def addHeader(hmac: bytes, s_kdf: str, i_count: int, iv: bytes, s_eType: str, s_hType: str, mSalt: bytes, eSalt: bytes, hSalt: bytes):
 	print("addHeader()")
 
-	head_delim = bytes("_", "UTF-8")
-	ciph_delim = bytes("???", "UTF-8")
-	kdf = bytes(s_kdf, "UTF-8")
-	count = bytes(str(i_count), "UTF-8")
-	encryptionType = bytes(s_encryptionType, "UTF-8")
-	hashType = bytes(s_hashType, "UTF-8")
-
-	header = hmac + head_delim + kdf + head_delim + count + head_delim + iv + head_delim + encryptionType + head_delim + \
-		hashType + head_delim + masterSalt + head_delim + encryptionSalt + head_delim + hmacSalt + ciph_delim
+	formatHeaderFields(hmac, s_kdf, i_count, iv, s_eType, s_hType, mSalt, eSalt, hSalt)
+	header = header_fields['HMAC'] + HD + header_fields['KDF'] + HD + header_fields['count'] + HD + header_fields['iv'] + HD + \
+				header_fields['eType'] + HD + header_fields['hType'] + HD + header_fields['mSalt'] + HD + header_fields['eSalt'] + HD + \
+						header_fields['hSalt'] + CD
 	
 	DEBUG = True
 	if DEBUG:
 		print("Header:\n", header, end="\n\n")
-	
-	# bet
-	DEBUG_DIAGNOSTIC = True
-	if DEBUG_DIAGNOSTIC:
-
-		global header_fields_diagnostic
-
-		header_fields_diagnostic['HMAC'] = hmac
-		header_fields_diagnostic['KDF'] = kdf
-		header_fields_diagnostic['count'] = count
-		header_fields_diagnostic['iv'] = iv
-		header_fields_diagnostic['encryptionType'] = encryptionType
-		header_fields_diagnostic['hashType'] = hashType
-		header_fields_diagnostic['masterSalt'] = masterSalt
-		header_fields_diagnostic['encryptionSalt'] = encryptionSalt
-		header_fields_diagnostic['hmacSalt'] = hmacSalt
-
-		original_stdout = sys.stdout 
-
-		with open('header_fields_diagnostic.log', 'w') as f:
-			sys.stdout = f 
-			
-		for key in header_fields_diagnostic.keys():
-			print(key + ":\n\t\t\t\t\t\t", header_fields_diagnostic[key])
-
-		f.close()
-
-		with open('header_fields_diagnostic.log', 'w') as f2:
-		sys.stdout = f2 
-			
-		for value in header_fields_diagnostic.values():
-			print(header_fields_diagnostic[key])
-
-		f.close()
-
-		sys.stdout = original_stdout 
 	
 	return header
 
@@ -361,7 +349,7 @@ def initDecryptionScheme():
 verifyHmac()
 '''
 def verifyHmac(master_key):
-	h = HMAC.new(master_key, digestmod=hash_library[decryption_scheme['hashType']])
+	h = HMAC.new(master_key, digestmod=hash_library[decryption_scheme['hType']])
 	h.update(decryption_scheme_bytes['iv'] + decryption_scheme_bytes['ciphertext'])
 	try:
 		h.hexverify(decryption_scheme['HMAC']) #TODO fix hexvrify to verify
@@ -380,8 +368,8 @@ Can be easily updated for purposes of crypto-agility
 hash_library = {"SHA256": SHA256, "SHA512": SHA512}
 standard_block_size = {"3DES": 8, "AES128": 16}
 
-header_fields_diagnostic = {}
-header_params = ["HMAC", "KDF", "count", "iv", "encryptionType", "hashType", "masterSalt", "encryptionSalt", "hmacSalt"]
+header_fields = {}
+header_params = ["HMAC", "KDF", "count", "iv", "eType", "hType", "mSalt", "eSalt", "hSalt"]
 encryption_scheme = {}
 decryption_scheme = {}
 decryption_scheme_bytes = {}
@@ -404,15 +392,15 @@ if DEBUG_0:
 if ENCRYPTION_BRANCH:
 	initEncryptionScheme()
 
-	block_size = standard_block_size[encryption_scheme['encryptionType']]
-	hash_mod = hash_library[encryption_scheme['hashType']]
+	block_size = standard_block_size[encryption_scheme['eType']]
+	hash_mod = hash_library[encryption_scheme['hType']]
 
 	plaintext = getPlaintext()
 	generateSalts(block_size)
 
-	master_key = createKey(password, encryption_scheme['masterSalt'], block_size, encryption_scheme['count'], hash_mod, MASTER_KEY)
-	encryption_key = createKey(password, encryption_scheme['encryptionSalt'], block_size, 1, hash_mod, ENCRYPTION_KEY)
-	hmac_key = createKey(password, encryption_scheme['hmacSalt'], block_size, 1, hash_mod, HMAC_KEY)
+	master_key = createKey(password, encryption_scheme['mSalt'], block_size, encryption_scheme['count'], hash_mod, MASTER_KEY)
+	encryption_key = createKey(password, encryption_scheme['eSalt'], block_size, 1, hash_mod, ENCRYPTION_KEY)
+	hmac_key = createKey(password, encryption_scheme['hSalt'], block_size, 1, hash_mod, HMAC_KEY)
 
 	iv, ciphertext = encryptDocument(encryption_key, plaintext)
 	iv_ciphertext = iv + ciphertext
@@ -422,8 +410,8 @@ if ENCRYPTION_BRANCH:
 	encryption_scheme['HMAC'] = hmac
 	encryption_scheme['iv'] = binascii.hexlify(iv).decode()
 # aleph
-	header = addHeader(hmac, encryption_scheme['KDF'], encryption_scheme['count'], iv, encryption_scheme['encryptionType'], encryption_scheme['hashType'], \
-		encryption_scheme['masterSalt'], encryption_scheme['encryptionSalt'], encryption_scheme['hmacSalt'])
+	header = addHeader(hmac, encryption_scheme['KDF'], encryption_scheme['count'], iv, encryption_scheme['eType'], encryption_scheme['hType'], \
+		encryption_scheme['mSalt'], encryption_scheme['eSalt'], encryption_scheme['hSalt'])
 
 	final_file = header + ciphertext
 
@@ -456,6 +444,20 @@ if ENCRYPTION_BRANCH:
 		print("HMAC: ", hmac, end='\n\n')
 
 		print("Final File Type: ", final_file)
+
+		# DEBUG_DIAGNOSTIC = True
+		# if DEBUG_DIAGNOSTIC:
+		# 	original_stdout = sys.stdout 
+
+		# 	with open('header_fields.log', 'w') as f:
+		# 		sys.stdout = f 
+				
+		# 		for key in header_fields.keys():
+		# 			print(key + ": ", header_fields[key])
+				
+		# 		sys.stdout = original_stdout 
+
+		# 		f.close()
 
 	
 
