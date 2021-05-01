@@ -10,6 +10,7 @@ import json
 import binascii
 import sys
 import argparse
+import filecmp
 
 ###############################################################################
 # Salts can be strings or binary
@@ -61,10 +62,12 @@ def getArgs():
 
 	if mode.upper() == 'ENCRYPT':
 		ENCRYPTION_BRANCH = True
+		DECRYPTION_BRANCH = False
 		print("Beginning Encryption", end='\n\n')
 		
 	if mode.upper() == 'DECRYPT':
 		DECRYPTION_BRANCH = True
+		ENCRYPTION_BRANCH = False
 		print("Beginning Decryption", end='\n\n')
 
 '''
@@ -306,47 +309,42 @@ initDecryptionScheme()
 def initDecryptionScheme():
 	print("initDecryptionScheme()")
 
-	global decryption_scheme
-	global decryption_scheme_bytes
+	global d_scheme
 
-	with open('config_file_decryption') as config_file:
-		conf_scheme = json.load(config_file)
-		
-	with open(conf_scheme['filePath'], "rb") as encrypted_file:
-		encrypted_doc = encrypted_file.read()
+	with open(file_path, "rb") as encrypted_file:
+		e_doc = encrypted_file.read()
+		encrypted_file.close()
 
-	meta_cipher = encrypted_doc.split(bytes("???", "UTF-8"))
+	meta_cipher = e_doc.split(CD)
 
-	meta = meta_cipher[0].split(bytes("_", "UTF-8"))
-	decryption_scheme_bytes = dict(zip(header_params, meta))
-	decryption_scheme_bytes['cipherext'] = meta_cipher[1]
+	meta = meta_cipher[0].split(HD)
+	d_scheme = dict(zip(header_params, meta))
 
-	meta_string = []
-	for x in meta:
-		meta_string.append(x.decode())
+	original_stdout = sys.stdout
+
+	with open("decryption_header_diagnostic.log", "w") as f:
+		sys.stdout = f
+		for key in d_scheme.keys():
+			print(key, "->", d_scheme[key])
+		f.close()
 	
-	decryption_scheme = dict(zip(header_params, meta_string))
-	decryption_scheme['password'] = conf_scheme['password']
+	sys.stdout = original_stdout
+	d_scheme['cText'] = meta_cipher[1]
 
-	DEBUG = False
+	DEBUG = True
 	if DEBUG:
-		print("Decryption Scheme: ", conf_scheme, end='\n\n')
-		print("Encrypted Doc Type: ", type(encrypted_doc), end='\n\n')
-		# print("Encrypted Doc: \n", encrypted_doc)
-		print("Meta of Meta Cipher Type: ", type(meta_cipher[0]))
-		print("Meta of Meta Cipher: ", meta_cipher[0], end='\n\n')
-		print("Meta String: ", meta_string, end='\n\n')
-		print("Decryption Scheme: ", decryption_scheme_bytes, end='\n\n')
-		print("Decryption Scheme:\n", decryption_scheme, end='\n\n')
+		print("Encrypted File: \n", e_doc, end="\n\n")
+		print("Cipher Text: \n", d_scheme['cText'], end="\n\n")
+		print("Headers Match:", filecmp.cmp("encryption_header_diagnostics.log", "decryption_header_diagnostic.log"), end="\n\n")
 
 '''
 verifyHmac()
 '''
 def verifyHmac(master_key):
-	h = HMAC.new(master_key, digestmod=hash_library[decryption_scheme['hType']])
-	h.update(decryption_scheme_bytes['iv'] + decryption_scheme_bytes['ciphertext'])
+	h = HMAC.new(master_key, digestmod=hash_library[d_scheme['hType']])
+	h.update(d_scheme['iv'] + d_scheme['ciphertext'])
 	try:
-		h.hexverify(decryption_scheme['HMAC']) #TODO fix hexvrify to verify
+		h.hexverify(d_scheme['HMAC']) #TODO fix hexvrify to verify
 		print("The message '%s' is authentic" % msg)
 	except ValueError:
 		print("The message or the key is wrong")
@@ -364,11 +362,10 @@ standard_block_size = {"3DES": 8, "AES128": 16}
 h_fields = {}
 header_params = ["HMAC", "KDF", "count", "iv", "eType", "hType", "mSalt", "eSalt", "hSalt"]
 e_scheme = {}
-decryption_scheme = {}
-decryption_scheme_bytes = {}
+d_scheme = {}
+d_scheme = {}
 password = ""
 file_path = ""
-
 
 ###############################################################################
 # Configure preferences from CLI and config files
@@ -378,6 +375,7 @@ getArgs()
 DEBUG_0 = False
 if DEBUG_0:
 	print(f"From Main()\nFile Path: {file_path}\nPassword: {password}", end="\n\n")
+
 
 ###############################################################################
 # Encryption Program Flow
@@ -425,11 +423,11 @@ if ENCRYPTION_BRANCH:
 	if DEBUG_DIAGNOSTIC:
 		original_stdout = sys.stdout 
 
-		with open('header_fields_diagnostics.log', 'w') as f:
+		with open('encryption_header_diagnostics.log', 'w') as f:
 			sys.stdout = f 
 			
 			for key in h_fields.keys():
-				print(h_fields[key])
+				print(key, "->", h_fields[key])
 			
 			sys.stdout = original_stdout 
 
@@ -438,28 +436,29 @@ if ENCRYPTION_BRANCH:
 		with open('key_diagnostics.log', 'w') as f:
 			sys.stdout = f 
 	
-			print(e_scheme['HMAC'])
-			print(e_scheme['mKey'])
-			print(e_scheme['eKey'])
-			print(e_scheme['hKey'])
+			print("HMAC: ", e_scheme['HMAC'])
+			print("M_Key: ", e_scheme['mKey'])
+			print("E_Key: ", e_scheme['eKey'])
+			print("H_Key: ", e_scheme['hKey'])
 			
 			sys.stdout = original_stdout 
 
 			f.close()
 
-'''
+
 ###############################################################################
 # Decryption Program Flow 
 ###############################################################################
 if DECRYPTION_BRANCH:
 
 	initDecryptionScheme()
-
+	#aleph
+'''
 	DEBUG = False
 	if DEBUG:
 		print("From Main:\n")
-		print("Decryption Scheme Bytes:\n", decryption_scheme_bytes, end='\n\n')
-		print("Decryption Scheme:\n", decryption_scheme, end='\n\n')
+		print("Decryption Scheme Bytes:\n", d_scheme, end='\n\n')
+		print("Decryption Scheme:\n", d_scheme, end='\n\n')
 	
 	master_key = createMasterKey()
 	# print("Master Key: ", master_key)
