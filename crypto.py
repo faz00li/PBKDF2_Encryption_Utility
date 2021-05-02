@@ -270,7 +270,6 @@ def getFileName():
 	print("getFileName()")
 	file_path_tokens = file_path.split("/")
 	file_name = file_path_tokens[len(file_path_tokens) -1]
-	file_name = file_name + ".enc" 
 	
 	DEBUG = True
 	if DEBUG:
@@ -279,11 +278,17 @@ def getFileName():
 	return file_name
 		
 '''
-saveEncryptedFile()
+saveFile()
 '''
-def saveEncryptedFile(final_file):
-	print("saveEncryptedFile()")
+def saveFile(final_file, mode):
+	print("saveFile()")
 	file_name = getFileName()
+
+	if mode == ENCRYPTION_BRANCH:
+		file_name = file_name + ".enc"
+	
+	if mode == DECRYPTION_BRANCH:
+		file_name = file_name + ".dec"
 
 	DEBUG = True
 	if DEBUG:
@@ -294,7 +299,7 @@ def saveEncryptedFile(final_file):
 	with open(file_name, "wb") as f:
 		f.write(final_file)
 	f.close()
-
+# bet
 ###############################################################################
 # Decryption Utility Methods
 ###############################################################################
@@ -369,7 +374,6 @@ def decryptDocument(e_key: bytes, iv: bytes, block_size: int, ciphertext: bytes)
 		print("Plaintext:\n", plaintext)
 	
 	return plaintext
-#bet
 
 ###############################################################################
 # Variables tracking encryption and decryption session settings and preferences
@@ -438,7 +442,7 @@ if ENCRYPTION_BRANCH:
 
 	# Combine header and ciphertext into one file and save
 	final_file = e_scheme['header'] + e_scheme['cText']
-	saveEncryptedFile(final_file)
+	saveFile(final_file, ENCRYPTION_BRANCH)
 
 	# Additional debugging - log1: header log2: keys, strictly for debugging in production
 	DEBUG_DIAGNOSTIC = True
@@ -519,6 +523,7 @@ if DECRYPTION_BRANCH:
 	d_scheme['pText'] = decryptDocument(d_scheme['eKey'], d_scheme['iv'], d_scheme['bSize'] ,d_scheme['cText'])
 
 	#aleph
+	saveFile(d_scheme['pText'], DECRYPTION_BRANCH)
 
 
 
