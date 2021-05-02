@@ -307,7 +307,7 @@ initDecryptionScheme()
 	* create two dictionaries 1) byte meta data fields 2) string meta data fields
 '''
 def initDecryptionScheme():
-	print("initDecryptionScheme()")
+	print("initDecryptionScheme()\n")
 
 	global d_scheme
 
@@ -331,19 +331,24 @@ def initDecryptionScheme():
 	sys.stdout = original_stdout
 	d_scheme['cText'] = meta_cipher[1]
 
-	DEBUG = True
-	if DEBUG:
-		print("Encryption/Decryption Headers Match:", filecmp.cmp("header_diagnostics_encryption.log", "header_diagnostics_decryption.log"), end="\n\n")
+	DEBUG_DECRYPTION_SCHEME = True
+	if DEBUG_DECRYPTION_SCHEME:
+		print("Decryption Scheme:")
+		for key in d_scheme.keys():
+			if key == 'cText':
+				break
+			print(f"{key}:\t{d_scheme[key]}")
+		print()
 
 '''
 verifyHmac()
 '''
-def verifyHmac(master_key):
-	h = HMAC.new(master_key, digestmod=hash_library[d_scheme['hType']])
-	h.update(d_scheme['iv'] + d_scheme['ciphertext'])
+def verifyHmac(hmac_key: bytes, iv_ciphertext: bytes, hmac, hash_mod):
+	h = HMAC.new(hmac_key, digestmod=hash_mod)
+	h.update(iv_ciphertext)
 	try:
-		h.hexverify(d_scheme['HMAC']) #TODO fix hexvrify to verify
-		print("The message '%s' is authentic" % msg)
+		h.verify(hmac)
+		print("The message '%s' is authentic" % hmac)
 	except ValueError:
 		print("The message or the key is wrong")
 
@@ -452,6 +457,13 @@ if ENCRYPTION_BRANCH:
 if DECRYPTION_BRANCH:
 
 	initDecryptionScheme()
+
+	# Additional debugging - log1: headers, strictly for debugging in production
+	DEBUG_HEADER_DIAGNOSTICS = True
+	if DEBUG_HEADER_DIAGNOSTICS:
+		print("Encryption/Decryption Headers Match:", \
+			filecmp.cmp("header_diagnostics_encryption.log", "header_diagnostics_decryption.log"), \
+				end="\n\n")
 	
 	# Get cipher block size and actual Python hash module
 	d_scheme['bSize'] = standard_block_size[str(d_scheme['eType'], "UTF-8")]
@@ -462,9 +474,9 @@ if DECRYPTION_BRANCH:
 	d_scheme['eKey'] = createKey(d_scheme['mKey'], d_scheme['eSalt'], d_scheme['bSize'], 1, hash_mod, ENCRYPTION_KEY)
 	d_scheme['hKey'] = createKey(d_scheme['mKey'], d_scheme['hSalt'], d_scheme['bSize'], 1, hash_mod, HMAC_KEY)
 
-	# Additional debugging - log1: header log2: keys, strictly for debugging in production
-	DEBUG_DIAGNOSTIC = True
-	if DEBUG_DIAGNOSTIC:
+	# Additional debugging - log2: keys, strictly for debugging in production
+	DEBUG_KEY_DIAGNOSTICS = True
+	if DEBUG_KEY_DIAGNOSTICS:
 		with open('key_diagnostics_decryption.log', 'w') as f:
 			
 			original_stdout = sys.stdout 
@@ -482,6 +494,10 @@ if DECRYPTION_BRANCH:
 
 			print("Derived Keys Match: ", filecmp.cmp('key_diagnostics_encryption.log', 'key_diagnostics_decryption.log'))
 	#aleph
+
+	# Verify hmac(iv + ciphertext)
+	d_scheme['iv_cText'] = d_scheme['iv'] + d_scheme['cText']
+	d_scheme['auth'] = verifyHmac(d_scheme['hKey'], d_scheme['iv_cText'], d_scheme['HMAC'], hash_mod)
 
 
 
