@@ -184,13 +184,14 @@ def encryptDocument(encryption_key, plaintext):
 	ciphertext = cipher.encrypt(pad(plaintext, AES.block_size)) #TODO paramaterize
 	iv = cipher.iv
 
-	DEBUG = True
+	DEBUG = False
 	if DEBUG:
 		print("IV Type: ", type(iv))
 		print("IV: ", iv, end='\n\n')
 
 		print("Ciphertext Type: ", type(ciphertext))
 		print("Ciphertext:\n", ciphertext, end='\n\n')
+		# Prints whole document
 
 	return iv, ciphertext
 	# TODO 3DES
@@ -267,10 +268,14 @@ getFileName()
 	* returns name of encrypted file
 '''
 def getFileName():
-	print("getFileName()")
+	print("getFileName()\n")
+
 	file_path_tokens = file_path.split("/")
 	file_name = file_path_tokens[len(file_path_tokens) -1]
-	
+	x = file_name.rfind(".enc")
+	if x != -1:
+		file_name = file_name[:x + 1]
+
 	DEBUG = True
 	if DEBUG:
 		print("File Name:", file_name)
@@ -290,11 +295,12 @@ def saveFile(final_file, mode):
 	if mode == DECRYPTION_BRANCH:
 		file_name = file_name + ".dec"
 
-	DEBUG = True
+	DEBUG = False
 	if DEBUG:
 		print("File Name:", file_name)
 		print("Final File Type: ", type(final_file), end='\n\n')
 		print("Final File:\n", final_file, end='\n\n')
+		# This prints whole file
 
 	with open(file_name, "wb") as f:
 		f.write(final_file)
@@ -369,7 +375,7 @@ def decryptDocument(e_key: bytes, iv: bytes, block_size: int, ciphertext: bytes)
 	plaintext = cipher.decrypt(ciphertext)
 	plaintext = unpad(plaintext, block_size)
 	
-	DEBUG_DECRYPT_DOCUMENT = True
+	DEBUG_DECRYPT_DOCUMENT = False
 	if DEBUG_DECRYPT_DOCUMENT:
 		print("Plaintext:\n", plaintext)
 	
@@ -445,7 +451,7 @@ if ENCRYPTION_BRANCH:
 	saveFile(final_file, ENCRYPTION_BRANCH)
 
 	# Additional debugging - log1: header log2: keys, strictly for debugging in production
-	DEBUG_DIAGNOSTIC = True
+	DEBUG_DIAGNOSTIC = False
 	if DEBUG_DIAGNOSTIC:
 		original_stdout = sys.stdout 
 
@@ -480,7 +486,7 @@ if DECRYPTION_BRANCH:
 	initDecryptionScheme()
 
 	# Additional debugging - log1: headers, strictly for debugging in production
-	DEBUG_HEADER_DIAGNOSTICS = True
+	DEBUG_HEADER_DIAGNOSTICS = False
 	if DEBUG_HEADER_DIAGNOSTICS:
 		print("Encryption/Decryption Headers Match:", \
 			filecmp.cmp("header_diagnostics_encryption.log", "header_diagnostics_decryption.log"), \
@@ -496,7 +502,7 @@ if DECRYPTION_BRANCH:
 	d_scheme['hKey'] = createKey(d_scheme['mKey'], d_scheme['hSalt'], d_scheme['bSize'], 1, hash_mod, HMAC_KEY)
 
 	# Additional debugging - log2: keys, strictly for debugging in production
-	DEBUG_KEY_DIAGNOSTICS = True
+	DEBUG_KEY_DIAGNOSTICS = False
 	if DEBUG_KEY_DIAGNOSTICS:
 		with open('key_diagnostics_decryption.log', 'w') as f:
 			
