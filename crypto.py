@@ -322,7 +322,7 @@ def initDecryptionScheme():
 
 	original_stdout = sys.stdout
 
-	with open("decryption_header_diagnostic.log", "w") as f:
+	with open("header_diagnostics_decryption.log", "w") as f:
 		sys.stdout = f
 		for key in d_scheme.keys():
 			print(key, "->", d_scheme[key])
@@ -333,9 +333,7 @@ def initDecryptionScheme():
 
 	DEBUG = True
 	if DEBUG:
-		print("Encrypted File: \n", e_doc, end="\n\n")
-		print("Cipher Text: \n", d_scheme['cText'], end="\n\n")
-		print("Headers Match:", filecmp.cmp("encryption_header_diagnostics.log", "decryption_header_diagnostic.log"), end="\n\n")
+		print("Encryption/Decryption Headers Match:", filecmp.cmp("header_diagnostics_encryption.log", "header_diagnostics_decryption.log"), end="\n\n")
 
 '''
 verifyHmac()
@@ -348,6 +346,8 @@ def verifyHmac(master_key):
 		print("The message '%s' is authentic" % msg)
 	except ValueError:
 		print("The message or the key is wrong")
+
+		#bet
 
 ###############################################################################
 # Variables tracking encryption and decryption session settings and preferences
@@ -423,7 +423,7 @@ if ENCRYPTION_BRANCH:
 	if DEBUG_DIAGNOSTIC:
 		original_stdout = sys.stdout 
 
-		with open('encryption_header_diagnostics.log', 'w') as f:
+		with open('header_diagnostics_encryption.log', 'w') as f:
 			sys.stdout = f 
 			
 			for key in h_fields.keys():
@@ -433,7 +433,7 @@ if ENCRYPTION_BRANCH:
 
 			f.close()
 
-		with open('key_diagnostics.log', 'w') as f:
+		with open('key_diagnostics_encryption.log', 'w') as f:
 			sys.stdout = f 
 	
 			print("HMAC: ", e_scheme['HMAC'])
@@ -452,7 +452,39 @@ if ENCRYPTION_BRANCH:
 if DECRYPTION_BRANCH:
 
 	initDecryptionScheme()
+	
+	# Get cipher block size and actual Python hash module
+	d_scheme['bSize'] = standard_block_size[str(d_scheme['eType'], "UTF-8")]
+	hash_mod = hash_library[str(d_scheme['hType'], "UTF-8")]
+
+	# Create keys
+	d_scheme['mKey'] = createKey(password, d_scheme['mSalt'], d_scheme['bSize'], int(d_scheme['count']), hash_mod, MASTER_KEY)
+	d_scheme['eKey'] = createKey(d_scheme['mKey'], d_scheme['eSalt'], d_scheme['bSize'], 1, hash_mod, ENCRYPTION_KEY)
+	d_scheme['hKey'] = createKey(d_scheme['mKey'], d_scheme['hSalt'], d_scheme['bSize'], 1, hash_mod, HMAC_KEY)
+
+	# Additional debugging - log1: header log2: keys, strictly for debugging in production
+	DEBUG_DIAGNOSTIC = True
+	if DEBUG_DIAGNOSTIC:
+		with open('key_diagnostics_decryption.log', 'w') as f:
+			
+			original_stdout = sys.stdout 
+			
+			sys.stdout = f 
+
+			print("HMAC: ", d_scheme['HMAC'])
+			print("M_Key: ", d_scheme['mKey'])
+			print("E_Key: ", d_scheme['eKey'])
+			print("H_Key: ", d_scheme['hKey'])
+			
+			sys.stdout = original_stdout 
+
+			f.close()
+
+			print("Derived Keys Match: ", filecmp.cmp('key_diagnostics_encryption.log', 'key_diagnostics_decryption.log'))
 	#aleph
+
+
+
 '''
 	DEBUG = False
 	if DEBUG:
