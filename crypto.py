@@ -181,7 +181,7 @@ def encryptDocument(encryption_key, plaintext):
 	print("encryptDocument()")
 
 	cipher = AES.new(encryption_key, AES.MODE_CBC)
-	ciphertext = cipher.encrypt(pad(plaintext, AES.block_size))
+	ciphertext = cipher.encrypt(pad(plaintext, AES.block_size)) #TODO paramaterize
 	iv = cipher.iv
 
 	DEBUG = True
@@ -344,15 +344,32 @@ def initDecryptionScheme():
 verifyHmac()
 '''
 def verifyHmac(hmac_key: bytes, iv_ciphertext: bytes, hmac, hash_mod):
+	print("verifyHmac()\n")
 	h = HMAC.new(hmac_key, digestmod=hash_mod)
 	h.update(iv_ciphertext)
 	try:
 		h.verify(hmac)
 		print("The message '%s' is authentic" % hmac)
 	except ValueError:
-		print("The message or the key is wrong")
+		print("The message or the key is wrong. Program terminated.")
+		exit(0)
 
-		#bet
+'''
+decryptDocument(e_key, iv, ciphertext)	
+'''
+def decryptDocument(e_key: bytes, iv: bytes, block_size: int, ciphertext: bytes):
+	print("decryptDocument()\n")
+
+	cipher = AES.new(e_key, AES.MODE_CBC, iv)
+	plaintext = cipher.decrypt(ciphertext)
+	plaintext = unpad(plaintext, block_size)
+	
+	DEBUG_DECRYPT_DOCUMENT = True
+	if DEBUG_DECRYPT_DOCUMENT:
+		print("Plaintext:\n", plaintext)
+	
+	return plaintext
+#bet
 
 ###############################################################################
 # Variables tracking encryption and decryption session settings and preferences
@@ -493,11 +510,15 @@ if DECRYPTION_BRANCH:
 			f.close()
 
 			print("Derived Keys Match: ", filecmp.cmp('key_diagnostics_encryption.log', 'key_diagnostics_decryption.log'))
-	#aleph
 
 	# Verify hmac(iv + ciphertext)
 	d_scheme['iv_cText'] = d_scheme['iv'] + d_scheme['cText']
 	d_scheme['auth'] = verifyHmac(d_scheme['hKey'], d_scheme['iv_cText'], d_scheme['HMAC'], hash_mod)
+
+	# Decrypt ciphertext 
+	d_scheme['pText'] = decryptDocument(d_scheme['eKey'], d_scheme['iv'], d_scheme['bSize'] ,d_scheme['cText'])
+
+	#aleph
 
 
 
