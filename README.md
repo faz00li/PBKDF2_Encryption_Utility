@@ -1,5 +1,5 @@
 # PBKDF2_Encryption_Utility
-# Instructions: #
+* Instructions: *
 This PBKDF2 encryption utility supports the following two symmetric encryption standards: 3DES and AES128/AES256. The utility also supports two hashing algorithms: SHA256 and SHA512. To configure the utility enter 1) prefered KDF 2) iteration count for the KDF 3) which encryption standard to use 4) and which hash digest. Currently only the parameters listed above are supported.
 
 # Performance: #
