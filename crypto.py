@@ -18,30 +18,30 @@ import time
 # DEBUG MACROS - DECRYPTION
 ###############################################################################
 DEBUG_DIAGNOSTIC_E_SCHEME_KEY_ENCRYPTION_BRANCH = False
-DEBUG_GET_ARGS = True
+DEBUG_GET_ARGS = False
 DEBUG_INIT_ENCRYPTION_SCHEME = False
 DEBUG_CREATE_KEY_I = False
-DEBUG_CREATE_KEY_O = True
+DEBUG_CREATE_KEY_O = False
 DEBUG_GET_PLAIN_TEXT = False
 DEBUG_GENERATE_SALTS = False
-DEBUG_ENCRYPT_DOCUMENT_I = True
-DEBUG_ENCRYPT_DOCUMENT_O = True
+DEBUG_ENCRYPT_DOCUMENT_I = False
+DEBUG_ENCRYPT_DOCUMENT_O = False
 DEBUG_AUTHENTICATE_ENCRYPTION = False
 DEBUG_FORMAT_HEADER_FIELDS = False
-DEBUG_GET_HEADER = True
-DEBUG_GET_FILE_NAME = True
-DEBUG_SAVE_FILE = True
+DEBUG_GET_HEADER = False
+DEBUG_GET_FILE_NAME = False
+DEBUG_SAVE_FILE = False
 
 ###############################################################################
 # DEBUG MACROS - DECRYPTION
 ###############################################################################
-DEBUG_INIT_DECRYPTION_SCHEME = True
-DEBUG_DECRYPT_DOCUMENT = True
+DEBUG_INIT_DECRYPTION_SCHEME = False
+DEBUG_DECRYPT_DOCUMENT = False
 DEBUG_HEADER_DIAGNOSTICS_DECRYPTION_BRANCH = False
 DEBUG_DIAGNOSTICS_KEY_DECRYPTION_BRANCH = False
 
 ###############################################################################
-# Variables tracking encryption and decryption session settings and preferences
+# Variables tracking encryption/decryption and various session settings 
 ###############################################################################
 '''
 Dictionaries of hash modules and info about encrytion standards
@@ -55,17 +55,9 @@ h_fields = {}
 header_params = ["HMAC", "KDF", "count", "iv", "eType", "hType", "mSalt", "eSalt", "hSalt"]
 e_scheme = {}
 d_scheme = {}
-d_scheme = {}
 password = ""
 file_path = ""
 
-###############################################################################
-# Salts can be strings or binary
-# Keys must be binary
-# Ciphertext must be binary
-# Plaintext must be binary
-# hmac digest returned as bytes
-###############################################################################
 # Regulate operation mode
 ENCRYPTION_BRANCH = True
 DECRYPTION_BRANCH = False
@@ -82,12 +74,12 @@ CD = bytes("???", "UTF-8")
 ###############################################################################
 # Methods for both Encryption and Decryption
 ###############################################################################
-'''
-getArgs()
-	* collect preferences from CLI
-'''
 def getArgs():
-	print("getArgs()")
+	'''
+		Collect preferences from CLI: encryption type, filepath, and password. 	
+	'''
+
+	print("\ngetArgs()")
 	parser = argparse.ArgumentParser(prog="PBKDF2 Encryption Utility", \
 	usage="Program for encrypting and decrypting files. CLI input takes mode of operation, path to file, and the password.")
 
@@ -116,15 +108,21 @@ def getArgs():
 		ENCRYPTION_BRANCH = False
 		print("Beginning Decryption", end='\n\n')
 
-'''
-createKey(password, salt, dkLen, count, hmac_hash_module=hash_mod)
-	* generate a single key, dictated by args, that can be used as a:
-		> session master key
-		> document encryption key
-		> message authentication key
-'''
 def createKey(password, salt, dkLen, count, hash_mod, key_type):
-	print("createKey()")
+	'''
+		Generate a single key to use as session master key, document encryption key message authentication key.
+
+		Parameters: 
+			* password
+			* salt 
+			* dkLen 
+			* count 
+			* hmac_hash_module=hash_mod)
+		
+		Returns:
+			* key 	
+	'''
+	print("\ncreateKey()")
 
 	if DEBUG_CREATE_KEY_I:
 		print("Password: ", password)
@@ -148,17 +146,57 @@ def createKey(password, salt, dkLen, count, hash_mod, key_type):
 	
 	return key
 
+def getFileName():
+	'''
+		Parse file path to file being encrypted. Extract filename and add .enc extension.
+
+		Returns: filename
+	'''
+	print("\ngetFileName()")
+
+	file_path_tokens = file_path.split("/")
+	file_name = file_path_tokens[len(file_path_tokens) -1]
+	x = file_name.rfind(".enc")
+	if x != -1:
+		print("X: ", x)
+		file_name = file_name[:x]
+
+	if DEBUG_GET_FILE_NAME :
+		print("File Name:", file_name)
+	
+	return file_name
+		
+def saveFile(final_file, mode):
+	'''
+		Write raw bytes of header + ciphertext to file.
+	'''
+	print("\nsaveFile()")
+	file_name = getFileName()
+
+	if mode == ENCRYPTION_BRANCH:
+		file_name = file_name + ".enc"
+	
+	if mode == DECRYPTION_BRANCH:
+		file_name = file_name + ".dec"
+
+	if DEBUG_SAVE_FILE:
+		print("File Name:", file_name)
+		print("Final File Type: ", type(final_file), end='\n\n')
+		# print("Final File:\n", final_file, end='\n\n') # This prints whole file
+		
+	with open(file_name, "wb") as f:
+		f.write(final_file)
+	f.close()
 
 ###############################################################################
 # Encryption Methods 
 ###############################################################################
-'''
-initEncryptionScheme()
-	* opens the configuration file
-	* parses parameters into dictionary
-'''
 def initEncryptionScheme():
-	print("initEncryptionScheme()")
+	'''
+		Read from configuration file and parse preferences into global encryption scheme dictionary.
+	'''
+
+	print("\ninitEncryptionScheme()")
 
 	global e_scheme
 
@@ -170,12 +208,13 @@ def initEncryptionScheme():
 	if DEBUG_INIT_ENCRYPTION_SCHEME:
 		print("Initial Encryption Scheme: ", e_scheme, end='\n\n')
 		
-'''
-getPlaintext()
-	* obtain file in raw bytes
-'''
 def getPlaintext():
-	print("getPlaintext()")
+	'''
+		Read in raw bytes of file to encrypt
+
+		Returns: bytes plaintext obj
+	'''
+	print("\ngetPlaintext()")
 
 	with open(file_path,"rb") as f:
 		plaintext = f.read()
@@ -186,15 +225,12 @@ def getPlaintext():
 		print("Plaintext:\n", plaintext, end='\n\n')
 
 	return plaintext
-	
-'''
-generateSalts()
-  * mSalt
-  * eSalt
-  * hSalt
-'''
+
 def generateSalts(block_size):
-	print("generateSalts(block_size)")
+	'''
+		Generat salts for generating master, encryption, and hmac keys write into global encryption scheme dictionary.
+	'''
+	print("\ngenerateSalts(block_size)")
 
 	global e_scheme
 
@@ -211,15 +247,13 @@ def generateSalts(block_size):
 		print("HMAC Salt Type: ", type(e_scheme['hSalt']))
 		print("HMAC Salt: ", e_scheme['hSalt'], end='\n\n')
 		
-
 def encryptDocument(encryption_type: str, encryption_key: bytes, plaintext: bytes):
 	'''
-		* convert plaintext to byte arrey 
-		* pad byte array to appropriate block size
-		* encrypt document in manner specified by config schema w/ CBC mode
-		* output IV and ciphertext to console
+		Pad byte array to appropriate block size. Encrypt document in manner specified by config scheme w/ AES_CBC or3DES_CBC 
+
+		Returns: initialization vector and ciphertext 
 	'''
-	
+
 	print("\nencryptDocument()")
 
 	if DEBUG_ENCRYPT_DOCUMENT_I:
@@ -254,14 +288,15 @@ def encryptDocument(encryption_type: str, encryption_key: bytes, plaintext: byte
 
 	return iv, ciphertext
 
-'''
-authenticateEncryption()
-	* iv + ciphertext > to string > to bytes
-	* derive HMAC from bytes
-	* store HMAC in dictionary
-'''
 def authenticateEncryption(hmac_key, iv_ciphertext, hash_mod):
-	print("authenticateEncryption()")
+	'''
+		Hash(iv + ciphertext)
+		
+		Returns: digest
+	'''
+
+	print("\authenticateEncryption()")
+
 	h = HMAC.new(hmac_key, digestmod=hash_mod)
 	h.update(iv_ciphertext)
 	hmac = h.digest()
@@ -272,11 +307,10 @@ def authenticateEncryption(hmac_key, iv_ciphertext, hash_mod):
 
 	return hmac
 
-'''
-formatHeaderFields():
-	* Convert all header fileds to bytes and store in dictionary
-'''
 def formatHeaderFields(hmac: bytes, s_kdf: str, i_count: int, iv: bytes, s_eType: str, s_hType: str, mSalt: bytes, eSalt: bytes, hSalt: bytes):
+	'''
+		Format HMAC digest, type of KDF, number of iterations for KDF, initialization vector, type of hash module, and all three salts needed for KDF, encryption and verification into raw bytes and store in global header fields dictionary.
+	'''
 	print("formatHeaderFields()\n")
 
 	global h_fields
@@ -301,13 +335,13 @@ def formatHeaderFields(hmac: bytes, s_kdf: str, i_count: int, iv: bytes, s_eType
 			print(key, " ", h_fields[key])
 		print("\n")
 
-'''
-getHeader(master_key, encryption_key, hmac_key, iv_ciphertext)
-	* add header to ciphertext
-	* return header and ciphertext as string 
-'''
 def getHeader(hmac: bytes, s_kdf: str, i_count: int, iv: bytes, s_eType: str, s_hType: str, mSalt: bytes, eSalt: bytes, hSalt: bytes):
-	print("getHeader()")
+	'''
+		Concatonate HMAC digest, type of KDF, number of iterations for KDF, initialization vector, type of hash module, and all three salts needed for KDF, encryption, and verification.
+
+		Returns: header.
+	'''
+	print("\ngetHeader()")
 
 	header = h_fields['HMAC'] + HD + h_fields['KDF'] + HD + h_fields['count'] + HD + h_fields['iv'] + HD + \
 				h_fields['eType'] + HD + h_fields['hType'] + HD + h_fields['mSalt'] + HD + h_fields['eSalt'] + HD + \
@@ -319,61 +353,14 @@ def getHeader(hmac: bytes, s_kdf: str, i_count: int, iv: bytes, s_eType: str, s_
 	
 	return header
 
-'''
-getFileName()
-	* returns name of encrypted file
-'''
-def getFileName():
-	print("getFileName()\n")
-
-	file_path_tokens = file_path.split("/")
-	file_name = file_path_tokens[len(file_path_tokens) -1]
-	x = file_name.rfind(".enc")
-	if x != -1:
-		print("X: ", x)
-		file_name = file_name[:x]#change here
-
-	if DEBUG_GET_FILE_NAME :
-		print("File Name:", file_name)
-	
-	return file_name
-		
-'''
-saveFile()
-'''
-def saveFile(final_file, mode):
-	print("saveFile()")
-	file_name = getFileName()
-
-	if mode == ENCRYPTION_BRANCH:
-		file_name = file_name + ".enc"
-	
-	if mode == DECRYPTION_BRANCH:
-		file_name = file_name + ".dec"
-
-	if DEBUG_SAVE_FILE:
-		print("File Name:", file_name)
-		print("Final File Type: ", type(final_file), end='\n\n')
-		# print("Final File:\n", final_file, end='\n\n') # This prints whole file
-		
-
-	with open(file_name, "wb") as f:
-		f.write(final_file)
-	f.close()
-
 ###############################################################################
 # Decryption Utility Methods
 ###############################################################################
-'''
-initDecryptionScheme()
-	* read decryption configuration settings from file
-	* read raw encrypted doc from file
-	* split raw doc into meta data and the file
-	* split meta data into fields
-	* create two dictionaries 1) byte meta data fields 2) string meta data fields
-'''
 def initDecryptionScheme():
-	print("initDecryptionScheme()\n")
+	'''
+		Read raw bytes from encrypted file. Split header and ciphertext in two. Split header into appropriate fields and merge them into a global decryption scheme dictioanry.
+	'''
+	print("\ninitDecryptionScheme()\n")
 
 	global d_scheme
 
@@ -405,11 +392,11 @@ def initDecryptionScheme():
 			print(f"{key}:\t{d_scheme[key]}")
 		print()
 
-'''
-verifyHmac()
-'''
 def verifyHmac(hmac_key: bytes, iv_ciphertext: bytes, hmac, hash_mod):
-	print("verifyHmac()\n")
+	'''
+		Hash(iv + ciphertext) and compare w/ signature passed through header.
+	'''
+	print("\nverifyHmac()\n")
 	h = HMAC.new(hmac_key, digestmod=hash_mod)
 	h.update(iv_ciphertext)
 	try:
@@ -419,10 +406,9 @@ def verifyHmac(hmac_key: bytes, iv_ciphertext: bytes, hmac, hash_mod):
 		print("The message or the key is wrong. Program terminated.")
 		exit(0)
 
-
 def decryptDocument(e_type: bytes, e_key: bytes, iv: bytes, ciphertext: bytes):
 	'''
-		Decrypt 3DES or AES document
+		Decrypt document via 3DES or AES. 
 		Returns: plaintext
 	'''
 	print("\ndecryptDocument()")
@@ -454,13 +440,9 @@ def decryptDocument(e_type: bytes, e_key: bytes, iv: bytes, ciphertext: bytes):
 	#bet
 
 ###############################################################################
-# Configure preferences from CLI and config files
+# Configure CLI preferences for both encryption and decryption branches
 ###############################################################################
 getArgs()
-
-DEBUG_0 = False
-if DEBUG_0:
-	print(f"From Main()\nFile Path: {file_path}\nPassword: {password}", end="\n\n")
 
 ###############################################################################
 # Encryption Program Flow
@@ -534,12 +516,13 @@ if ENCRYPTION_BRANCH:
 	end = time.perf_counter()
 
 	print("Time taken: ", end - start)
+	exit(0)
 
 ###############################################################################
 # Decryption Program Flow 
 ###############################################################################
 if DECRYPTION_BRANCH:
-
+	# Get decryption configuration settings and preferences
 	initDecryptionScheme()
 
 	# Additional debugging - log1: headers, strictly for debugging in production
@@ -558,7 +541,6 @@ if DECRYPTION_BRANCH:
 	d_scheme['hKey'] = createKey(d_scheme['mKey'], d_scheme['hSalt'], d_scheme['kSize'], 1, hash_mod, HMAC_KEY)
 
 	# Additional debugging - log2: keys, strictly for debugging in production
-	
 	if DEBUG_DIAGNOSTICS_KEY_DECRYPTION_BRANCH:
 		with open('key_diagnostics_decryption.log', 'w') as f:
 			
@@ -584,8 +566,9 @@ if DECRYPTION_BRANCH:
 	# Decrypt ciphertext 
 	d_scheme['pText'] = decryptDocument(d_scheme['eType'], d_scheme['eKey'], d_scheme['iv'],d_scheme['cText'])
 
-# aleph
+	# Save decrypted document and exit program
 	saveFile(d_scheme['pText'], DECRYPTION_BRANCH)
+	exit(0)
 
 
 
