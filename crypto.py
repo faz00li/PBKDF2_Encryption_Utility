@@ -1,5 +1,6 @@
 # Cryptodrome Library
 from Crypto.Cipher import AES
+from Crypto.Cipher import DES3
 from Crypto.Hash import HMAC, SHA256, SHA512
 from Crypto.Random import get_random_bytes
 from Crypto.Protocol.KDF import PBKDF2
@@ -16,15 +17,14 @@ import time
 ###############################################################################
 # DEBUG MACROS - DECRYPTION
 ###############################################################################
-#aleph
 DEBUG_DIAGNOSTIC_E_SCHEME_KEY_ENCRYPTION_BRANCH = False
 DEBUG_GET_ARGS = True
 DEBUG_INIT_ENCRYPTION_SCHEME = False
 DEBUG_CREATE_KEY_I = False
-DEBUG_CREATE_KEY_O = False
+DEBUG_CREATE_KEY_O = True
 DEBUG_GET_PLAIN_TEXT = False
 DEBUG_GENERATE_SALTS = False
-DEBUG_ENCRYPT_DOCUMENT = False
+DEBUG_ENCRYPT_DOCUMENT_O = False
 DEBUG_AUTHENTICATE_ENCRYPTION = False
 DEBUG_FORMAT_HEADER_FIELDS = False
 DEBUG_GET_HEADER = True
@@ -38,6 +38,25 @@ DEBUG_INIT_DECRYPTION_SCHEME = True
 DEBUG_DECRYPT_DOCUMENT = False
 DEBUG_HEADER_DIAGNOSTICS_DECRYPTION_BRANCH = False
 DEBUG_DIAGNOSTICS_KEY_DECRYPTION_BRANCH = False
+
+###############################################################################
+# Variables tracking encryption and decryption session settings and preferences
+###############################################################################
+'''
+Dictionaries of hash modules and info about encrytion standards
+Can be easily updated for purposes of crypto-agility
+'''
+hash_library = {"SHA256": SHA256, "SHA512": SHA512}
+standard_block_size = {"3DES": 8, "AES128": 16, "AES256": 16}
+standard_key_size = {"3DES": 16, "AES128": 16, "AES256": 16}
+
+h_fields = {}
+header_params = ["HMAC", "KDF", "count", "iv", "eType", "hType", "mSalt", "eSalt", "hSalt"]
+e_scheme = {}
+d_scheme = {}
+d_scheme = {}
+password = ""
+file_path = ""
 
 ###############################################################################
 # Salts can be strings or binary
@@ -191,30 +210,53 @@ def generateSalts(block_size):
 		print("HMAC Salt Type: ", type(e_scheme['hSalt']))
 		print("HMAC Salt: ", e_scheme['hSalt'], end='\n\n')
 		
-'''
-encryptDocument(encryption_key)
-	* convert plaintext to byte arrey 
-	* pad byte array to appropriate block size
-	* encrypt document in manner specified by config schema w/ CBC mode
-	* output IV and ciphertext to console
-'''
-def encryptDocument(encryption_key, plaintext):
-	print("encryptDocument()")
 
-	cipher = AES.new(encryption_key, AES.MODE_CBC)
-	ciphertext = cipher.encrypt(pad(plaintext, AES.block_size)) #TODO paramaterize
-	iv = cipher.iv
+def encryptDocument(encryption_type: str, block_size: int, encryption_key: bytes, plaintext: bytes):
+	'''
+		* convert plaintext to byte arrey 
+		* pad byte array to appropriate block size
+		* encrypt document in manner specified by config schema w/ CBC mode
+		* output IV and ciphertext to console
+	'''
+	
+	DEBUG_ENCRYPT_DOCUMENT_I = True
+	
+	print("\nencryptDocument()")
 
-	if DEBUG_ENCRYPT_DOCUMENT:
+	# bet
+	if DEBUG_ENCRYPT_DOCUMENT_I:
+		print("Encryption Type Type: ", type(encryption_type))
+		print("Encryption Type: ", encryption_type)
+		print("Block Size Type: ", type(block_size))
+		print("Block Size: ", block_size)
+		print("Encryption Key Type: ", type(encryption_key))
+		print("Encryption Key Length: ", len(encryption_key))
+		print("Encryption Key: ", encryption_key)
+		print("Plaintext Type: ", type(plaintext))
+		# print("Plaintext: ", plaintext) # print whole doc
+
+	if  encryption_type == "AES128" or encryption_type =="AES256":
+		print("\nAES ENCRYPTION")
+		cipher = AES.new(encryption_key, AES.MODE_CBC)
+		ciphertext = cipher.encrypt(pad(plaintext, AES.block_size))
+		iv = cipher.iv
+
+	if encryption_type == "3DES":
+		print("\n3DES ENCRYPTION")
+		encryption_key = DES3.adjust_key_parity(encryption_key)
+		cipher = DES3.new(encryption_key, DES3.MODE_CBC)
+		ciphertext= cipher.encrypt(pad(plaintext, DES3.block_size))
+		iv = cipher.iv
+
+	if DEBUG_ENCRYPT_DOCUMENT_O:
 		print("IV Type: ", type(iv))
 		print("IV: ", iv, end='\n\n')
 
 		print("Ciphertext Type: ", type(ciphertext))
-		print("Ciphertext:\n", ciphertext, end='\n\n')
-		# Prints whole document
+		# print("Ciphertext:\n", ciphertext, end='\n\n') # Prints whole document
+		
 
 	return iv, ciphertext
-	# TODO 3DES
 
 '''
 authenticateEncryption()
@@ -322,7 +364,7 @@ def saveFile(final_file, mode):
 	with open(file_name, "wb") as f:
 		f.write(final_file)
 	f.close()
-# gimel
+
 ###############################################################################
 # Decryption Utility Methods
 ###############################################################################
@@ -396,23 +438,7 @@ def decryptDocument(e_key: bytes, iv: bytes, block_size: int, ciphertext: bytes)
 	
 	return plaintext
 
-###############################################################################
-# Variables tracking encryption and decryption session settings and preferences
-###############################################################################
-'''
-Dictionaries of hash modules and info about encrytion standards
-Can be easily updated for purposes of crypto-agility
-'''
-hash_library = {"SHA256": SHA256, "SHA512": SHA512}
-standard_block_size = {"3DES": 8, "AES128": 16}
 
-h_fields = {}
-header_params = ["HMAC", "KDF", "count", "iv", "eType", "hType", "mSalt", "eSalt", "hSalt"]
-e_scheme = {}
-d_scheme = {}
-d_scheme = {}
-password = ""
-file_path = ""
 
 ###############################################################################
 # Configure preferences from CLI and config files
@@ -428,26 +454,29 @@ if DEBUG_0:
 # Encryption Program Flow
 ###############################################################################
 if ENCRYPTION_BRANCH:
+	start = time.perf_counter()
 	# Get encryption configuration settings and preferences
 	initEncryptionScheme()
 	
 	# Get cipher block size and actual Python hash module
-	e_scheme['bSize'] = standard_block_size[e_scheme['eType']]
+	# e_scheme['bSize'] = standard_block_size[e_scheme['eType']] # TODO REMOVE
+	e_scheme['kSize'] = standard_key_size[e_scheme['eType']]
 	hash_mod = hash_library[e_scheme['hType']]
 
 	# Extract plaintext
 	e_scheme['pText'] = getPlaintext()
 
 	# Generate Salts - written globally into scheme dictionary
-	generateSalts(e_scheme['bSize'])
+	generateSalts(e_scheme['kSize'])
 
 	# Create keys
-	e_scheme['mKey'] = createKey(password, e_scheme['mSalt'], e_scheme['bSize'], e_scheme['count'], hash_mod, MASTER_KEY)
-	e_scheme['eKey'] = createKey(e_scheme['mKey'], e_scheme['eSalt'], e_scheme['bSize'], 1, hash_mod, ENCRYPTION_KEY)
-	e_scheme['hKey'] = createKey(e_scheme['mKey'], e_scheme['hSalt'], e_scheme['bSize'], 1, hash_mod, HMAC_KEY)
+	e_scheme['mKey'] = createKey(password, e_scheme['mSalt'], e_scheme['kSize'], e_scheme['count'], hash_mod, MASTER_KEY)
+	e_scheme['eKey'] = createKey(e_scheme['mKey'], e_scheme['eSalt'], e_scheme['kSize'], 1, hash_mod, ENCRYPTION_KEY)
+	e_scheme['hKey'] = createKey(e_scheme['mKey'], e_scheme['hSalt'], e_scheme['kSize'], 1, hash_mod, HMAC_KEY)
 
 	# Encrypt file - obtain iv and ciphertext
-	e_scheme['iv'], e_scheme['cText'] = encryptDocument(e_scheme['eKey'], e_scheme['pText'])
+	e_scheme['iv'], e_scheme['cText'] = encryptDocument(e_scheme['eType'], e_scheme['kSize'], e_scheme['eKey'], e_scheme['pText'])
+	# aleph
 
 	# Authenticate hmac(iv + ciphertext)
 	e_scheme['iv_cText'] = e_scheme['iv'] + e_scheme['cText']
@@ -491,7 +520,9 @@ if ENCRYPTION_BRANCH:
 
 			f.close()
 
+	end = time.perf_counter()
 
+	print("Time taken: ", end - start)
 ###############################################################################
 # Decryption Program Flow 
 ###############################################################################
@@ -506,16 +537,16 @@ if DECRYPTION_BRANCH:
 				end="\n\n")
 	
 	# Get cipher block size and actual Python hash module
-	d_scheme['bSize'] = standard_block_size[str(d_scheme['eType'], "UTF-8")]
+	d_scheme['kSize'] = standard_key_size[str(d_scheme['eType'], "UTF-8")]
 	hash_mod = hash_library[str(d_scheme['hType'], "UTF-8")]
 
 	# Create keys
-	d_scheme['mKey'] = createKey(password, d_scheme['mSalt'], d_scheme['bSize'], int(d_scheme['count']), hash_mod, MASTER_KEY)
-	d_scheme['eKey'] = createKey(d_scheme['mKey'], d_scheme['eSalt'], d_scheme['bSize'], 1, hash_mod, ENCRYPTION_KEY)
-	d_scheme['hKey'] = createKey(d_scheme['mKey'], d_scheme['hSalt'], d_scheme['bSize'], 1, hash_mod, HMAC_KEY)
+	d_scheme['mKey'] = createKey(password, d_scheme['mSalt'], d_scheme['kSize'], int(d_scheme['count']), hash_mod, MASTER_KEY)
+	d_scheme['eKey'] = createKey(d_scheme['mKey'], d_scheme['eSalt'], d_scheme['kSize'], 1, hash_mod, ENCRYPTION_KEY)
+	d_scheme['hKey'] = createKey(d_scheme['mKey'], d_scheme['hSalt'], d_scheme['kSize'], 1, hash_mod, HMAC_KEY)
 
 	# Additional debugging - log2: keys, strictly for debugging in production
-	# bet
+	
 	if DEBUG_DIAGNOSTICS_KEY_DECRYPTION_BRANCH:
 		with open('key_diagnostics_decryption.log', 'w') as f:
 			
@@ -545,17 +576,7 @@ if DECRYPTION_BRANCH:
 
 
 
-'''
-	DEBUG = False
-	if DEBUG:
-		print("From Main:\n")
-		print("Decryption Scheme Bytes:\n", d_scheme, end='\n\n')
-		print("Decryption Scheme:\n", d_scheme, end='\n\n')
-	
-	master_key = createMasterKey()
-	# print("Master Key: ", master_key)
-	verifyHmac(master_key)
-'''	
+
 
 
 
