@@ -11,6 +11,33 @@ import binascii
 import sys
 import argparse
 import filecmp
+import time
+
+###############################################################################
+# DEBUG MACROS - DECRYPTION
+###############################################################################
+#aleph
+DEBUG_DIAGNOSTIC_E_SCHEME_KEY_ENCRYPTION_BRANCH = False
+DEBUG_GET_ARGS = True
+DEBUG_INIT_ENCRYPTION_SCHEME = False
+DEBUG_CREATE_KEY_I = False
+DEBUG_CREATE_KEY_O = False
+DEBUG_GET_PLAIN_TEXT = False
+DEBUG_GENERATE_SALTS = False
+DEBUG_ENCRYPT_DOCUMENT = False
+DEBUG_AUTHENTICATE_ENCRYPTION = False
+DEBUG_FORMAT_HEADER_FIELDS = False
+DEBUG_GET_HEADER = True
+DEBUG_GET_FILE_NAME = True
+DEBUG_SAVE_FILE = True
+
+###############################################################################
+# DEBUG MACROS - DECRYPTION
+###############################################################################
+DEBUG_INIT_DECRYPTION_SCHEME = True
+DEBUG_DECRYPT_DOCUMENT = False
+DEBUG_HEADER_DIAGNOSTICS_DECRYPTION_BRANCH = False
+DEBUG_DIAGNOSTICS_KEY_DECRYPTION_BRANCH = False
 
 ###############################################################################
 # Salts can be strings or binary
@@ -56,8 +83,7 @@ def getArgs():
 	file_path = args.path
 	password = args.password
 
-	DEBUG_0 = True
-	if DEBUG_0:
+	if DEBUG_GET_ARGS:
 		print(f"Mode: {mode}\nFile Path: {file_path}\nPassword: {password}", end="\n\n")
 
 	if mode.upper() == 'ENCRYPT':
@@ -80,8 +106,7 @@ createKey(password, salt, dkLen, count, hmac_hash_module=hash_mod)
 def createKey(password, salt, dkLen, count, hash_mod, key_type):
 	print("createKey()")
 
-	DEBUG_0 = True
-	if DEBUG_0:
+	if DEBUG_CREATE_KEY_I:
 		print("Password: ", password)
 		print('Salt: ', salt)
 		print("Desired Key Length: ", dkLen)
@@ -90,8 +115,7 @@ def createKey(password, salt, dkLen, count, hash_mod, key_type):
 
 	key = PBKDF2(password, salt, dkLen, count, hmac_hash_module=hash_mod)
 
-	DEBUG_1 = True
-	if DEBUG_1:
+	if DEBUG_CREATE_KEY_O:
 		if key_type == MASTER_KEY:
 			print("Master Key Type: ", type(key))
 			print("Master Key: ", key, end='\n\n')
@@ -123,8 +147,7 @@ def initEncryptionScheme():
 
 	config_file.close()
 
-	DEBUG = True
-	if DEBUG:
+	if DEBUG_INIT_ENCRYPTION_SCHEME:
 		print("Initial Encryption Scheme: ", e_scheme, end='\n\n')
 		
 '''
@@ -139,8 +162,7 @@ def getPlaintext():
 	
 	f.close()
 
-	DEBUG = True
-	if DEBUG:
+	if DEBUG_GET_PLAIN_TEXT:
 		print("Plaintext:\n", plaintext, end='\n\n')
 
 	return plaintext
@@ -160,8 +182,7 @@ def generateSalts(block_size):
 	e_scheme['eSalt']  = get_random_bytes(block_size)
 	e_scheme['hSalt']  = get_random_bytes(block_size)
 
-	DEBUG = True
-	if DEBUG:
+	if DEBUG_GENERATE_SALTS:
 		print("Desired Salt Length: ", block_size)
 		print("Master Salt Type: ", type(e_scheme['mSalt']))
 		print("Master Salt: ", e_scheme['mSalt'])
@@ -184,8 +205,7 @@ def encryptDocument(encryption_key, plaintext):
 	ciphertext = cipher.encrypt(pad(plaintext, AES.block_size)) #TODO paramaterize
 	iv = cipher.iv
 
-	DEBUG = False
-	if DEBUG:
+	if DEBUG_ENCRYPT_DOCUMENT:
 		print("IV Type: ", type(iv))
 		print("IV: ", iv, end='\n\n')
 
@@ -208,8 +228,7 @@ def authenticateEncryption(hmac_key, iv_ciphertext, hash_mod):
 	h.update(iv_ciphertext)
 	hmac = h.digest()
 
-	DEBUG = True
-	if DEBUG:
+	if DEBUG_AUTHENTICATE_ENCRYPTION:
 		print("HMAC Type:", type(hmac))
 		print("HMAC:", hmac, end='\n\n')
 
@@ -239,8 +258,7 @@ def formatHeaderFields(hmac: bytes, s_kdf: str, i_count: int, iv: bytes, s_eType
 	h_fields['eSalt'] = eSalt
 	h_fields['hSalt'] = hSalt
 
-	DEBUG = True
-	if DEBUG:
+	if DEBUG_FORMAT_HEADER_FIELDS:
 		for key in h_fields.keys():
 			print(key, " ", h_fields[key])
 		print("\n")
@@ -257,8 +275,8 @@ def getHeader(hmac: bytes, s_kdf: str, i_count: int, iv: bytes, s_eType: str, s_
 				h_fields['eType'] + HD + h_fields['hType'] + HD + h_fields['mSalt'] + HD + h_fields['eSalt'] + HD + \
 						h_fields['hSalt'] + CD
 	
-	DEBUG = True
-	if DEBUG:
+	if DEBUG_GET_HEADER:
+		print("Header Type: ", type(header))
 		print("Header:\n", header, end="\n\n")
 	
 	return header
@@ -274,10 +292,10 @@ def getFileName():
 	file_name = file_path_tokens[len(file_path_tokens) -1]
 	x = file_name.rfind(".enc")
 	if x != -1:
-		file_name = file_name[:x + 1]
+		print("X: ", x)
+		file_name = file_name[:x]#change here
 
-	DEBUG = True
-	if DEBUG:
+	if DEBUG_GET_FILE_NAME :
 		print("File Name:", file_name)
 	
 	return file_name
@@ -295,17 +313,16 @@ def saveFile(final_file, mode):
 	if mode == DECRYPTION_BRANCH:
 		file_name = file_name + ".dec"
 
-	DEBUG = False
-	if DEBUG:
+	if DEBUG_SAVE_FILE:
 		print("File Name:", file_name)
 		print("Final File Type: ", type(final_file), end='\n\n')
-		print("Final File:\n", final_file, end='\n\n')
-		# This prints whole file
+		# print("Final File:\n", final_file, end='\n\n') # This prints whole file
+		
 
 	with open(file_name, "wb") as f:
 		f.write(final_file)
 	f.close()
-# bet
+# gimel
 ###############################################################################
 # Decryption Utility Methods
 ###############################################################################
@@ -342,8 +359,7 @@ def initDecryptionScheme():
 	sys.stdout = original_stdout
 	d_scheme['cText'] = meta_cipher[1]
 
-	DEBUG_DECRYPTION_SCHEME = True
-	if DEBUG_DECRYPTION_SCHEME:
+	if DEBUG_INIT_DECRYPTION_SCHEME:
 		print("Decryption Scheme:")
 		for key in d_scheme.keys():
 			if key == 'cText':
@@ -374,8 +390,7 @@ def decryptDocument(e_key: bytes, iv: bytes, block_size: int, ciphertext: bytes)
 	cipher = AES.new(e_key, AES.MODE_CBC, iv)
 	plaintext = cipher.decrypt(ciphertext)
 	plaintext = unpad(plaintext, block_size)
-	
-	DEBUG_DECRYPT_DOCUMENT = False
+
 	if DEBUG_DECRYPT_DOCUMENT:
 		print("Plaintext:\n", plaintext)
 	
@@ -451,8 +466,7 @@ if ENCRYPTION_BRANCH:
 	saveFile(final_file, ENCRYPTION_BRANCH)
 
 	# Additional debugging - log1: header log2: keys, strictly for debugging in production
-	DEBUG_DIAGNOSTIC = False
-	if DEBUG_DIAGNOSTIC:
+	if DEBUG_DIAGNOSTIC_E_SCHEME_KEY_ENCRYPTION_BRANCH:
 		original_stdout = sys.stdout 
 
 		with open('header_diagnostics_encryption.log', 'w') as f:
@@ -486,8 +500,7 @@ if DECRYPTION_BRANCH:
 	initDecryptionScheme()
 
 	# Additional debugging - log1: headers, strictly for debugging in production
-	DEBUG_HEADER_DIAGNOSTICS = False
-	if DEBUG_HEADER_DIAGNOSTICS:
+	if DEBUG_HEADER_DIAGNOSTICS_DECRYPTION_BRANCH:
 		print("Encryption/Decryption Headers Match:", \
 			filecmp.cmp("header_diagnostics_encryption.log", "header_diagnostics_decryption.log"), \
 				end="\n\n")
@@ -502,8 +515,8 @@ if DECRYPTION_BRANCH:
 	d_scheme['hKey'] = createKey(d_scheme['mKey'], d_scheme['hSalt'], d_scheme['bSize'], 1, hash_mod, HMAC_KEY)
 
 	# Additional debugging - log2: keys, strictly for debugging in production
-	DEBUG_KEY_DIAGNOSTICS = False
-	if DEBUG_KEY_DIAGNOSTICS:
+	# bet
+	if DEBUG_DIAGNOSTICS_KEY_DECRYPTION_BRANCH:
 		with open('key_diagnostics_decryption.log', 'w') as f:
 			
 			original_stdout = sys.stdout 
@@ -528,7 +541,6 @@ if DECRYPTION_BRANCH:
 	# Decrypt ciphertext 
 	d_scheme['pText'] = decryptDocument(d_scheme['eKey'], d_scheme['iv'], d_scheme['bSize'] ,d_scheme['cText'])
 
-	#aleph
 	saveFile(d_scheme['pText'], DECRYPTION_BRANCH)
 
 
