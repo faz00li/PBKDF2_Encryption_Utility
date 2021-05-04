@@ -24,7 +24,8 @@ DEBUG_CREATE_KEY_I = False
 DEBUG_CREATE_KEY_O = True
 DEBUG_GET_PLAIN_TEXT = False
 DEBUG_GENERATE_SALTS = False
-DEBUG_ENCRYPT_DOCUMENT_O = False
+DEBUG_ENCRYPT_DOCUMENT_I = True
+DEBUG_ENCRYPT_DOCUMENT_O = True
 DEBUG_AUTHENTICATE_ENCRYPTION = False
 DEBUG_FORMAT_HEADER_FIELDS = False
 DEBUG_GET_HEADER = True
@@ -47,8 +48,8 @@ Dictionaries of hash modules and info about encrytion standards
 Can be easily updated for purposes of crypto-agility
 '''
 hash_library = {"SHA256": SHA256, "SHA512": SHA512}
-standard_block_size = {"3DES": 8, "AES128": 16, "AES256": 16}
 standard_key_size = {"3DES": 16, "AES128": 16, "AES256": 16}
+standard_block_size = {"3DES": 8, "AES128": 16, "AES256": 16}
 
 h_fields = {}
 header_params = ["HMAC", "KDF", "count", "iv", "eType", "hType", "mSalt", "eSalt", "hSalt"]
@@ -211,7 +212,7 @@ def generateSalts(block_size):
 		print("HMAC Salt: ", e_scheme['hSalt'], end='\n\n')
 		
 
-def encryptDocument(encryption_type: str, block_size: int, encryption_key: bytes, plaintext: bytes):
+def encryptDocument(encryption_type: str, encryption_key: bytes, plaintext: bytes):
 	'''
 		* convert plaintext to byte arrey 
 		* pad byte array to appropriate block size
@@ -219,16 +220,11 @@ def encryptDocument(encryption_type: str, block_size: int, encryption_key: bytes
 		* output IV and ciphertext to console
 	'''
 	
-	DEBUG_ENCRYPT_DOCUMENT_I = True
-	
 	print("\nencryptDocument()")
 
-	# bet
 	if DEBUG_ENCRYPT_DOCUMENT_I:
 		print("Encryption Type Type: ", type(encryption_type))
 		print("Encryption Type: ", encryption_type)
-		print("Block Size Type: ", type(block_size))
-		print("Block Size: ", block_size)
 		print("Encryption Key Type: ", type(encryption_key))
 		print("Encryption Key Length: ", len(encryption_key))
 		print("Encryption Key: ", encryption_key)
@@ -437,8 +433,7 @@ def decryptDocument(e_key: bytes, iv: bytes, block_size: int, ciphertext: bytes)
 		print("Plaintext:\n", plaintext)
 	
 	return plaintext
-
-
+	#bet
 
 ###############################################################################
 # Configure preferences from CLI and config files
@@ -448,7 +443,6 @@ getArgs()
 DEBUG_0 = False
 if DEBUG_0:
 	print(f"From Main()\nFile Path: {file_path}\nPassword: {password}", end="\n\n")
-
 
 ###############################################################################
 # Encryption Program Flow
@@ -475,7 +469,7 @@ if ENCRYPTION_BRANCH:
 	e_scheme['hKey'] = createKey(e_scheme['mKey'], e_scheme['hSalt'], e_scheme['kSize'], 1, hash_mod, HMAC_KEY)
 
 	# Encrypt file - obtain iv and ciphertext
-	e_scheme['iv'], e_scheme['cText'] = encryptDocument(e_scheme['eType'], e_scheme['kSize'], e_scheme['eKey'], e_scheme['pText'])
+	e_scheme['iv'], e_scheme['cText'] = encryptDocument(e_scheme['eType'], e_scheme['eKey'], e_scheme['pText'])
 	# aleph
 
 	# Authenticate hmac(iv + ciphertext)
