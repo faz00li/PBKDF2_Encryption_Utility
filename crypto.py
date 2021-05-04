@@ -36,7 +36,7 @@ DEBUG_SAVE_FILE = True
 # DEBUG MACROS - DECRYPTION
 ###############################################################################
 DEBUG_INIT_DECRYPTION_SCHEME = True
-DEBUG_DECRYPT_DOCUMENT = False
+DEBUG_DECRYPT_DOCUMENT = True
 DEBUG_HEADER_DIAGNOSTICS_DECRYPTION_BRANCH = False
 DEBUG_DIAGNOSTICS_KEY_DECRYPTION_BRANCH = False
 
@@ -419,18 +419,36 @@ def verifyHmac(hmac_key: bytes, iv_ciphertext: bytes, hmac, hash_mod):
 		print("The message or the key is wrong. Program terminated.")
 		exit(0)
 
-'''
-decryptDocument(e_key, iv, ciphertext)	
-'''
-def decryptDocument(e_key: bytes, iv: bytes, block_size: int, ciphertext: bytes):
-	print("decryptDocument()\n")
 
-	cipher = AES.new(e_key, AES.MODE_CBC, iv)
-	plaintext = cipher.decrypt(ciphertext)
-	plaintext = unpad(plaintext, block_size)
+def decryptDocument(e_type: bytes, e_key: bytes, iv: bytes, ciphertext: bytes):
+	'''
+		Decrypt 3DES or AES document
+		Returns: plaintext
+	'''
+	print("\ndecryptDocument()")
+
+	print("Encryption Type: ", type(e_type))
+	print("Encryption Type: ", e_type)
+	encryption_type = str(e_type, "UTF-8")
+	print("Encryption Type After String Conversion: ", encryption_type)
+	
+	if encryption_type == "AES128" or encryption_type == "AES256":
+		print("\nAES DECRYPTION")
+		cipher = AES.new(e_key, AES.MODE_CBC, iv)
+		plaintext = cipher.decrypt(ciphertext)
+		plaintext = unpad(plaintext, AES.block_size)
+
+	if encryption_type == "3DES":
+		print("\n3DES DECRYPTION")
+		e_key = DES3.adjust_key_parity(e_key)
+		cipher = DES3.new(e_key, DES3.MODE_CBC)
+		plaintext = cipher.decrypt(ciphertext)
+		plaintext = unpad(plaintext, DES3.block_size)
+	
 
 	if DEBUG_DECRYPT_DOCUMENT:
-		print("Plaintext:\n", plaintext)
+		print("Plaintext Type:\n", plaintext)
+		print("Plaintext:\n", plaintext) # Print entire doc
 	
 	return plaintext
 	#bet
@@ -470,7 +488,6 @@ if ENCRYPTION_BRANCH:
 
 	# Encrypt file - obtain iv and ciphertext
 	e_scheme['iv'], e_scheme['cText'] = encryptDocument(e_scheme['eType'], e_scheme['eKey'], e_scheme['pText'])
-	# aleph
 
 	# Authenticate hmac(iv + ciphertext)
 	e_scheme['iv_cText'] = e_scheme['iv'] + e_scheme['cText']
@@ -517,6 +534,7 @@ if ENCRYPTION_BRANCH:
 	end = time.perf_counter()
 
 	print("Time taken: ", end - start)
+
 ###############################################################################
 # Decryption Program Flow 
 ###############################################################################
@@ -564,8 +582,9 @@ if DECRYPTION_BRANCH:
 	d_scheme['auth'] = verifyHmac(d_scheme['hKey'], d_scheme['iv_cText'], d_scheme['HMAC'], hash_mod)
 
 	# Decrypt ciphertext 
-	d_scheme['pText'] = decryptDocument(d_scheme['eKey'], d_scheme['iv'], d_scheme['bSize'] ,d_scheme['cText'])
+	d_scheme['pText'] = decryptDocument(d_scheme['eType'], d_scheme['eKey'], d_scheme['iv'],d_scheme['cText'])
 
+# aleph
 	saveFile(d_scheme['pText'], DECRYPTION_BRANCH)
 
 
