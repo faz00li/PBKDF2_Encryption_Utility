@@ -441,7 +441,7 @@ def decryptDocument(e_type: bytes, e_key: bytes, iv: bytes, ciphertext: bytes):
 	if encryption_type == "3DES":
 		print("\n3DES DECRYPTION")
 		e_key = DES3.adjust_key_parity(e_key)
-		cipher = DES3.new(e_key, DES3.MODE_CBC)
+		cipher = DES3.new(e_key, DES3.MODE_CBC, iv)
 		plaintext = cipher.decrypt(ciphertext)
 		plaintext = unpad(plaintext, DES3.block_size)
 	
