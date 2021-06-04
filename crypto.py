@@ -19,8 +19,9 @@ import time
 ###############################################################################
 DEBUG_DIAGNOSTIC_E_SCHEME_KEY_ENCRYPTION_BRANCH = False
 DEBUG_GET_ARGS = False
-DEBUG_INIT_ENCRYPTION_SCHEME = False
-DEBUG_CREATE_KEY_I = False
+# ALPHA
+DEBUG_INIT_ENCRYPTION_SCHEME = True
+DEBUG_CREATE_KEY_I = True
 DEBUG_CREATE_KEY_O = False
 DEBUG_GET_PLAIN_TEXT = False
 DEBUG_GENERATE_SALTS = False
@@ -48,7 +49,7 @@ Dictionaries of hash modules and info about encrytion standards
 Can be easily updated for purposes of crypto-agility
 '''
 hash_library = {"SHA256": SHA256, "SHA512": SHA512}
-standard_key_size = {"3DES": 16, "AES128": 16, "AES256": 16}
+standard_key_size = {"3DES": 24, "AES128": 16, "AES256": 32} # <--- 256 bits
 standard_block_size = {"3DES": 8, "AES128": 16, "AES256": 16}
 
 h_fields = {}
@@ -454,7 +455,10 @@ if ENCRYPTION_BRANCH:
 	
 	# Get cipher block size and actual Python hash module
 	# e_scheme['bSize'] = standard_block_size[e_scheme['eType']] # TODO REMOVE
-	e_scheme['kSize'] = standard_key_size[e_scheme['eType']]
+	# BETA 
+	print("MAIN - ENCRYPTION TYPE: ", e_scheme['eType'])
+	e_scheme['kSize'] = standard_key_size[e_scheme['eType']] # <--- from conf file
+	print("MAIN - KEY SIZE: ", e_scheme['kSize'])
 	hash_mod = hash_library[e_scheme['hType']]
 
 	# Extract plaintext
@@ -532,7 +536,7 @@ if DECRYPTION_BRANCH:
 				end="\n\n")
 	
 	# Get cipher block size and actual Python hash module
-	d_scheme['kSize'] = standard_key_size[str(d_scheme['eType'], "UTF-8")]
+	d_scheme['kSize'] = standard_key_size[str(d_scheme['eType'], "UTF-8")] # <---
 	hash_mod = hash_library[str(d_scheme['hType'], "UTF-8")]
 
 	# Create keys
